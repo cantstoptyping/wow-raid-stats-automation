@@ -51,12 +51,12 @@ jobs:
         keep_files: false
         force_orphan: true
     
-    - name: Post to Discord
-      if: success()
-      env:
-        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
-      run: |
-        PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/slideshow.html"
-        curl -H "Content-Type: application/json" \
-             -d "{\"content\": \"📊 **New Raid Stats Posted!**\n\n🔗 View the stats: $PAGES_URL\n\n✨ Updated: $(date '+%Y-%m-%d %H:%M UTC')\"}" \
-             $DISCORD_WEBHOOK
+    # - name: Post to Discord
+    #   if: success()
+    #   env:
+    #     DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+    #   run: |
+    #     PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/slideshow.html"
+    #     curl -H "Content-Type: application/json" \
+    #          -d "{\"content\": \"📊 **New Raid Stats Posted!**\n\n🔗 View the stats: $PAGES_URL\n\n✨ Updated: $(date '+%Y-%m-%d %H:%M UTC')\"}" \
+    #          $DISCORD_WEBHOOK
