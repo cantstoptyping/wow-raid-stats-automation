@@ -10,6 +10,9 @@ jobs:
   generate-stats:
     runs-on: ubuntu-latest
     
+    permissions:
+      contents: write  # Allow pushing to gh-pages
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -32,6 +35,10 @@ jobs:
         echo "GUILD_REALM=Frostmourne" >> .env
         echo "GUILD_REGION=us" >> .env
         echo "RAID_TEAM_FILTER=vkf00" >> .env
+        echo "WARCRAFTLOGS_API_URL=https://www.warcraftlogs.com/api/v2/client" >> .env
+        echo "DATABASE_PATH=raid_stats.db" >> .env
+        echo "SLIDES_DIR=slides" >> .env
+        echo "OUTPUT_DIR=output" >> .env
     
     - name: Generate raid stats
       run: python main.py
@@ -42,12 +49,14 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./
         keep_files: false
+        force_orphan: true
     
     - name: Post to Discord
+      if: success()
       env:
         DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
       run: |
         PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/slideshow.html"
         curl -H "Content-Type: application/json" \
-             -d "{\"content\": \"📊 **New Raid Stats Posted!**\n\n🔗 View the stats: $PAGES_URL\n\n✨ Updated: $(date)\"}" \
+             -d "{\"content\": \"📊 **New Raid Stats Posted!**\n\n🔗 View the stats: $PAGES_URL\n\n✨ Updated: $(date '+%Y-%m-%d %H:%M UTC')\"}" \
              $DISCORD_WEBHOOK
