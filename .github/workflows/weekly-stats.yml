@@ -1,0 +1,74 @@
+name: Weekly Raid Stats
+
+on:
+  schedule:
+    # Run every Monday at 6 PM UTC (adjust for your timezone)
+    - cron: '0 18 * * 1'
+  workflow_dispatch: # Allow manual triggering
+
+env:
+  GUILD_NAME: ${{ secrets.GUILD_NAME }}
+  GUILD_REALM: ${{ secrets.GUILD_REALM }}
+  GUILD_REGION: ${{ secrets.GUILD_REGION }}
+
+jobs:
+  generate-and-post:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install Python dependencies
+      run: |
+        pip install -r requirements.txt
+    
+    - name: Install Node.js dependencies
+      run: |
+        npm install -g pptxgenjs playwright
+        playwright install chromium
+    
+    - name: Extract html2pptx library
+      run: |
+        mkdir -p html2pptx
+        tar -xzf /mnt/skills/public/pptx/html2pptx.tgz -C html2pptx
+    
+    - name: Create .env file
+      run: |
+        cat > .env << EOF
+        WARCRAFTLOGS_CLIENT_ID=${{ secrets.WARCRAFTLOGS_CLIENT_ID }}
+        WARCRAFTLOGS_CLIENT_SECRET=${{ secrets.WARCRAFTLOGS_CLIENT_SECRET }}
+        DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}
+        DISCORD_CHANNEL_ID=${{ secrets.DISCORD_CHANNEL_ID }}
+        GUILD_NAME=${{ secrets.GUILD_NAME }}
+        GUILD_REALM=${{ secrets.GUILD_REALM }}
+        GUILD_REGION=${{ secrets.GUILD_REGION }}
+        EOF
+    
+    - name: Fetch data and generate HTML slides
+      run: python main.py
+    
+    - name: Convert HTML to PowerPoint
+      run: NODE_PATH="$(npm root -g)" node convert.js
+    
+    - name: Post to Discord
+      run: python discord_bot.py post
+      if: success()
+    
+    - name: Upload presentation artifact
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: raid-stats-presentation
+        path: output/*.pptx
+        retention-days: 30
