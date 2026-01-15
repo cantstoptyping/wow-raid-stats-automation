@@ -1,0 +1,53 @@
+name: Generate Raid Stats
+
+on:
+  schedule:
+    # Run twice weekly: Wednesday 9am UTC and Sunday 9am UTC
+    - cron: '0 9 * * 3,0'
+  workflow_dispatch: # Allow manual runs
+
+jobs:
+  generate-stats:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Create .env file
+      run: |
+        echo "WARCRAFTLOGS_CLIENT_ID=${{ secrets.WARCRAFTLOGS_CLIENT_ID }}" >> .env
+        echo "WARCRAFTLOGS_CLIENT_SECRET=${{ secrets.WARCRAFTLOGS_CLIENT_SECRET }}" >> .env
+        echo "GUILD_NAME=Limeknighters" >> .env
+        echo "GUILD_REALM=Frostmourne" >> .env
+        echo "GUILD_REGION=us" >> .env
+        echo "RAID_TEAM_FILTER=vkf00" >> .env
+    
+    - name: Generate raid stats
+      run: python main.py
+    
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./
+        keep_files: false
+    
+    - name: Post to Discord
+      env:
+        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      run: |
+        PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/slideshow.html"
+        curl -H "Content-Type: application/json" \
+             -d "{\"content\": \"📊 **New Raid Stats Posted!**\n\n🔗 View the stats: $PAGES_URL\n\n✨ Updated: $(date)\"}" \
+             $DISCORD_WEBHOOK
