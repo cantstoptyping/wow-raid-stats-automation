@@ -16,8 +16,7 @@ Automated weekly PowerPoint generation for guild raid statistics using WarcraftL
 
 ```bash
 pip install -r requirements.txt
-npm install -g pptxgenjs playwright
-playwright install chromium
+
 ```
 
 ### 2. Configure API Keys
@@ -40,6 +39,7 @@ DISCORD_CHANNEL_ID=your_channel_id
 GUILD_NAME=YourGuildName
 GUILD_REALM=YourRealm
 GUILD_REGION=us  # us, eu, kr, tw, cn
+DIFFICULTY_FILTER=3" >> .env
 ```
 
 ### 3. Run Locally
@@ -52,16 +52,6 @@ python main.py
 python discord_bot.py
 ```
 
-### 4. Setup GitHub Actions (Optional)
-
-1. Fork this repo
-2. Add secrets in repo settings (Settings → Secrets → Actions):
-   - `WARCRAFTLOGS_CLIENT_ID`
-   - `WARCRAFTLOGS_CLIENT_SECRET`
-   - `DISCORD_BOT_TOKEN`
-   - `DISCORD_CHANNEL_ID`
-3. Edit `.github/workflows/weekly-stats.yml` to set your guild info
-4. The workflow runs every Monday at 6 PM (configurable)
 
 ## Project Structure
 
@@ -79,16 +69,6 @@ wow-raid-stats-automation/
 ├── output/                # Generated PowerPoint files
 └── .github/workflows/     # GitHub Actions config
 ```
-
-## Customization
-
-### Slide Templates
-
-Edit `generate_pptx.py` to customize:
-- Color scheme (CSS variables)
-- Slide layouts
-- Data visualizations
-- Statistics displayed
 
 ### Data Sources
 

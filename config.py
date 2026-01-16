@@ -29,6 +29,11 @@ SLIDES_DIR = 'slides'
 PRESENTATION_TITLE = f'{GUILD_NAME} Weekly Raid Stats'
 PRESENTATION_SUBTITLE = 'Performance Analysis & Top Performers'
 
+# difficulty filter to filter out any non mythic logs
+DIFFICULTY_FILTER = os.getenv('DIFFICULTY_FILTER', None)
+if DIFFICULTY_FILTER:
+    DIFFICULTY_FILTER = int(DIFFICULTY_FILTER)
+
 def validate_config():
     """Validate that required configuration is present."""
     required = {

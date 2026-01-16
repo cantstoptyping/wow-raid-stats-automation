@@ -7,7 +7,6 @@ import config
 
 def get_logo_html():
     """Get HTML for guild logo."""
-    # Check if logo exists
     import os
     logo_path = 'guild-logo.webp'
     if os.path.exists(logo_path):
@@ -104,17 +103,12 @@ def create_title_slide(week_start, week_end):
 
 def create_summary_slide(summary):
     """Create weekly summary slide."""
-    logo_html = get_logo_html()
     html = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
 </head>
 <body class="col bg-surface" style="width: 960px; height: 540px; position: relative;">
-    <!-- Logo in top right -->
-    <div style="position: absolute; top: 20px; right: 20px; z-index: 100;">
-        {logo_html}
-    </div>
     <div style="width: 920px; margin: 0 20px; padding-top: 20px;" class="fit">
         <h1 class="text-5xl text-primary" style="margin: 0; font-weight: bold;">WEEK OVERVIEW</h1>
     </div>
@@ -148,15 +142,15 @@ def create_summary_slide(summary):
         </div>
     </div>
     
-    <div class="bg-primary" style="margin: 0 32px; padding: 16px;">
+    <div class="bg-primary" style="margin: 0 32px 20px 32px; padding: 20px;">
         <div class="text-2xl text-primary-foreground text-center" style="margin: 0; font-weight: bold;">
             {summary['total_raid_time_hours']:.1f} Hours of Raiding
         </div>
     </div>
     
     <div style="position: absolute; bottom: 20px; left: 20px; right: 20px;">
-        <div class="text-xs text-muted-foreground">
-            Data compiled from guild raid logs - Updated: {datetime.now().strftime('%Y-%m-%d')}
+        <div class="text-xs text-center" style="margin: 0; color: #000000;">
+            Data compiled from guild raid logs • Updated: {datetime.now().strftime('%Y-%m-%d')}
         </div>
     </div>
 </body>
@@ -164,7 +158,7 @@ def create_summary_slide(summary):
     
     with open(os.path.join(config.SLIDES_DIR, 'slide2.html'), 'w') as f:
         f.write(html)
-
+        
 def create_boss_breakdown_slide(boss_stats):
     """Create slide with boss kill/wipe breakdown."""
 
@@ -485,44 +479,6 @@ def create_death_causes_slide(week_start, week_end):
         f.write(html)
 
 
-def create_conversion_script():
-    """Create Node.js script to convert HTML slides to PowerPoint."""
-    script = """const pptxgen = require("pptxgenjs");
-const { html2pptx } = require("./html2pptx");
-
-async function main() {
-  const pptx = new pptxgen();
-  pptx.layout = "LAYOUT_16x9";
-  
-  // Add slides
-  await html2pptx("slides/slide1.html", pptx);  // Title
-  await html2pptx("slides/slide2.html", pptx);  // Overview
-  await html2pptx("slides/slide3.html", pptx);  // Boss breakdown
-  await html2pptx("slides/slide4.html", pptx);  // Top performers (DPS/HPS split)
-  await html2pptx("slides/slide5.html", pptx);  // Top 5 DPS overall
-  
-  // Death causes slide (may not exist if no death data)
-  const fs = require('fs');
-  if (fs.existsSync("slides/slide6.html")) {
-    await html2pptx("slides/slide6.html", pptx);  // Top 10 death causes
-  }
-  
-
-
-  await html2pptx("slides/slide7.html", pptx);  // Closing
-  
-  // Save presentation
-  const filename = `output/raid-stats-${Date.now()}.pptx`;
-  await pptx.writeFile(filename);
-  console.log(`Presentation created: ${filename}`);
-}
-
-main().catch(console.error);
-"""
-    
-    with open('convert.js', 'w') as f:
-        f.write(script)
-
 def generate_presentation():
     """Main function to generate the PowerPoint presentation."""
     print("Generating PowerPoint presentation...")
@@ -557,8 +513,6 @@ def generate_presentation():
 
     create_closing_slide()
     
-    # Create conversion script
-    create_conversion_script()
     
     print("HTML slides created successfully!")
     print("Run the conversion with: NODE_PATH=\"$(npm root -g)\" node convert.js")

@@ -2,7 +2,7 @@ import requests
 from datetime import datetime, timedelta
 import config
 
-# Boss filter - only these bosses will be included
+# boss filter - only these bosses will be included - difficulty filter has been added to env. update in yml as well for midnight
 BOSS_FILTER = [
     "Plexus Sentinel",
     "Loom'ithar",
@@ -240,6 +240,13 @@ def fetch_weekly_data():
             if BOSS_FILTER and boss_name not in BOSS_FILTER:
                 print(f"  Skipping {boss_name} (not in boss filter)")
                 continue
+            
+            # Filter by difficulty if configured
+            if config.DIFFICULTY_FILTER is not None:
+                fight_difficulty = fight.get('difficulty', 0)
+                if fight_difficulty != config.DIFFICULTY_FILTER:
+                    print(f"  Skipping {boss_name} (difficulty {fight_difficulty}, want {config.DIFFICULTY_FILTER})")
+                    continue
             
             print(f"  Processing fight: {boss_name}")
             
