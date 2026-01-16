@@ -39,7 +39,7 @@ jobs:
         echo "DATABASE_PATH=raid_stats.db" >> .env
         echo "SLIDES_DIR=slides" >> .env
         echo "OUTPUT_DIR=output" >> .env
-        echo "DIFFICULTY_FILTER=3" >> .env
+        echo "DIFFICULTY_FILTER=5" >> .env
     
     - name: Generate raid stats
       run: python main.py

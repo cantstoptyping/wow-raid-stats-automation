@@ -39,7 +39,7 @@ DISCORD_CHANNEL_ID=your_channel_id
 GUILD_NAME=YourGuildName
 GUILD_REALM=YourRealm
 GUILD_REGION=us  # us, eu, kr, tw, cn
-DIFFICULTY_FILTER=3" >> .env
+DIFFICULTY_FILTER=5" >> .env
 ```
 
 ### 3. Run Locally
