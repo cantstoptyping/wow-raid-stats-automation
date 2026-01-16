@@ -43,12 +43,19 @@ jobs:
     - name: Generate raid stats
       run: python main.py
     
+    - name: Prepare deployment
+      run: |
+        mkdir -p deploy
+        cp slideshow.html deploy/
+        cp -r slides deploy/
+        [ -f guild-logo.webp ] && cp guild-logo.webp deploy/ || true
+        touch deploy/.nojekyll
+        
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./
-        keep_files: false
+        publish_dir: ./deploy  # <-- Changed from ./
         force_orphan: true
     
     - name: Post to Discord
