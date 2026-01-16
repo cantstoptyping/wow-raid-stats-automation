@@ -158,7 +158,7 @@ def create_summary_slide(summary):
     
     with open(os.path.join(config.SLIDES_DIR, 'slide2.html'), 'w') as f:
         f.write(html)
-        
+
 def create_boss_breakdown_slide(boss_stats):
     """Create slide with boss kill/wipe breakdown."""
 
@@ -477,7 +477,135 @@ def create_death_causes_slide(week_start, week_end):
     
     with open(os.path.join(config.SLIDES_DIR, 'slide6.html'), 'w') as f:
         f.write(html)
-
+def create_slideshow():
+    """Create an HTML slideshow viewer."""
+    import os
+    
+    # Get list of slides
+    slides = sorted([f for f in os.listdir(config.SLIDES_DIR) if f.startswith('slide') and f.endswith('.html')])
+    
+    slide_list = ',\n            '.join([f"'slides/{s}'" for s in slides])
+    
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{config.GUILD_NAME} Raid Stats</title>
+    <link rel="icon" type="image/webp" href="guild-logo.webp">
+    <style>
+        body {{
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: Arial, sans-serif;
+        }}
+        
+        #slideContainer {{
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }}
+        
+        iframe {{
+            width: 960px;
+            height: 540px;
+            border: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }}
+        
+        .nav-hint {{
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #888;
+            font-size: 14px;
+            z-index: 1000;
+        }}
+        
+        .slide-counter {{
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            color: #888;
+            font-size: 16px;
+            z-index: 1000;
+        }}
+    </style>
+</head>
+<body>
+    <div id="slideContainer">
+        <iframe id="slideFrame" src="slides/{slides[0]}"></iframe>
+    </div>
+    
+    <div class="slide-counter">
+        <span id="currentSlide">1</span> / <span id="totalSlides">{len(slides)}</span>
+    </div>
+    
+    <div class="nav-hint">
+        ← → Arrow keys | Space | Click to navigate | ESC for fullscreen
+    </div>
+    
+    <script>
+        const slides = [
+            {slide_list}
+        ];
+        
+        let currentSlide = 0;
+        const iframe = document.getElementById('slideFrame');
+        const currentSlideEl = document.getElementById('currentSlide');
+        
+        function showSlide(index) {{
+            if (index < 0) index = 0;
+            if (index >= slides.length) index = slides.length - 1;
+            
+            currentSlide = index;
+            iframe.src = slides[currentSlide];
+            currentSlideEl.textContent = currentSlide + 1;
+        }}
+        
+        function nextSlide() {{
+            if (currentSlide < slides.length - 1) {{
+                showSlide(currentSlide + 1);
+            }}
+        }}
+        
+        function prevSlide() {{
+            if (currentSlide > 0) {{
+                showSlide(currentSlide - 1);
+            }}
+        }}
+        
+        document.addEventListener('keydown', (e) => {{
+            if (e.key === 'ArrowRight' || e.key === ' ') {{
+                e.preventDefault();
+                nextSlide();
+            }} else if (e.key === 'ArrowLeft') {{
+                e.preventDefault();
+                prevSlide();
+            }} else if (e.key === 'Escape') {{
+                if (!document.fullscreenElement) {{
+                    document.documentElement.requestFullscreen();
+                }} else {{
+                    document.exitFullscreen();
+                }}
+            }}
+        }});
+        
+        document.getElementById('slideContainer').addEventListener('click', nextSlide);
+        
+        showSlide(0);
+    </script>
+</body>
+</html>"""
+    
+    with open('slideshow.html', 'w', encoding='utf-8') as f:
+        f.write(html)
+    
+    print("✓ Created slideshow.html")
 
 def generate_presentation():
     """Main function to generate the PowerPoint presentation."""
@@ -513,6 +641,7 @@ def generate_presentation():
 
     create_closing_slide()
     
+    create_slideshow()
     
     print("HTML slides created successfully!")
     print("Run the conversion with: NODE_PATH=\"$(npm root -g)\" node convert.js")

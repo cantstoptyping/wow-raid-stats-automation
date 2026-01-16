@@ -49,8 +49,19 @@ jobs:
         mkdir -p deploy
         cp slideshow.html deploy/
         cp -r slides deploy/
-        [ -f guild-logo.webp ] && cp guild-logo.webp deploy/ || true
+        
+        # Copy guild logo if it exists
+        if [ -f guild-logo.webp ]; then
+          cp guild-logo.webp deploy/
+          echo "✓ Copied guild-logo.webp"
+        else
+          echo "⚠ Warning: guild-logo.webp not found"
+        fi
+        
         touch deploy/.nojekyll
+        
+        echo "Deployment folder contents:"
+        ls -la deploy/
         
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
