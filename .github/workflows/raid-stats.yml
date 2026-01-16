@@ -75,7 +75,8 @@ jobs:
       env:
         DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
       run: |
-        PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/slideshow.html"
+        TIMESTAMP=$(date +%s)
+        PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/slideshow.html?v=${TIMESTAMP}"
         curl -H "Content-Type: application/json" \
              -d "{\"content\": \"📊 **New Raid Stats Posted!**\n\n🔗 View the stats: $PAGES_URL\n\n✨ Updated: $(date '+%Y-%m-%d %H:%M UTC')\"}" \
              $DISCORD_WEBHOOK
