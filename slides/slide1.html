@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" type="image/webp" href="../guild-logo.webp">
+    <meta charset="UTF-8">
+
+<style>
+* { 
+  margin: 0; 
+  padding: 0; 
+  box-sizing: border-box; 
+}
+
+body {
+  font-family: Arial, sans-serif !important;
+  background-color: #1a1a1a !important;
+  color: #f5f5f5 !important;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fill-height { flex: 1; }
+.fit { flex: none; }
+.text-center { text-align: center; }
+
+/* Background colors */
+.bg-surface { background-color: #1a1a1a !important; }
+.bg-primary { background-color: #32CD32 !important; }
+.bg-secondary { background-color: #D4AF37 !important; }
+.bg-muted { background-color: #2d2d2d !important; }
+.bg-accent { background-color: #2C1810 !important; }
+.bg-border { background-color: #404040 !important; }
+
+/* Text colors */
+.text-primary { color: #32CD32 !important; }
+.text-secondary { color: #D4AF37 !important; }
+.text-surface-foreground { color: #f5f5f5 !important; }
+.text-muted-foreground { color: #a0a0a0 !important; }
+.text-accent-foreground { color: #ffffff !important; }
+.text-primary-foreground { color: #ffffff !important; }
+.text-secondary-foreground { color: #1d1d1d !important; }
+
+/* Font sizes */
+.text-xs { font-size: 12px; }
+.text-sm { font-size: 14px; }
+.text-base { font-size: 16px; }
+.text-lg { font-size: 18px; }
+.text-xl { font-size: 20px; }
+.text-2xl { font-size: 24px; }
+.text-3xl { font-size: 30px; }
+.text-4xl { font-size: 36px; }
+.text-5xl { font-size: 48px; }
+.text-6xl { font-size: 60px; }
+.text-7xl { font-size: 72px; }
+.text-8xl { font-size: 96px; }
+</style>
+<script>const whTooltips = {colorLinks: true, iconizeLinks: true, renameLinks: true};</script>
+<script src="https://wow.zamimg.com/js/tooltips.js"></script>
+
+</head>
+<body class="col bg-surface center" style="width: 960px; height: 540px; position: relative;">
+    <!-- Logo in top right -->
+    <div style="position: absolute; top: 20px; right: 20px;">
+        <img src="../guild-logo.webp" style="width: 80px; height: 80px; object-fit: contain;">
+    </div>
+    
+    <div class="text-center">
+        <h1 class="text-8xl text-primary" style="margin: 0 0 20px 0; letter-spacing: 2px; text-transform: uppercase;">
+            Limeknighters
+        </h1>
+        <div class="text-4xl text-secondary" style="margin: 0 0 16px 0; font-weight: bold;">
+            Weekly Raid Report
+        </div>
+        <div class="text-2xl text-surface-foreground" style="margin: 0;">
+            January 11 - January 18, 2026
+        </div>
+    </div>
+    <div style="position: absolute; bottom: 20px; left: 20px; right: 20px;">
+        <div class="text-xs text-muted-foreground text-center">
+            Prepared by Raid Leadership - Data from WarcraftLogs
+        </div>
+    </div>
+</body>
+</html>

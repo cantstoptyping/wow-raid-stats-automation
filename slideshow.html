@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Limeknighters Raid Stats</title>
+    <link rel="icon" type="image/webp" href="guild-logo.webp">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: Arial, sans-serif;
+        }
+        
+        #slideContainer {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        iframe {
+            width: 960px;
+            height: 540px;
+            border: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        
+        .nav-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #888;
+            font-size: 14px;
+            z-index: 1000;
+        }
+        
+        .slide-counter {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            color: #888;
+            font-size: 16px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="slideContainer">
+        <iframe id="slideFrame" src="slides/slide1.html"></iframe>
+    </div>
+    
+    <div class="slide-counter">
+        <span id="currentSlide">1</span> / <span id="totalSlides">7</span>
+    </div>
+    
+    <div class="nav-hint">
+        ← → Arrow keys | Space | Click to navigate | ESC for fullscreen
+    </div>
+    
+    <script>
+        const slides = [
+            'slides/slide1.html',
+            'slides/slide2.html',
+            'slides/slide3.html',
+            'slides/slide4.html',
+            'slides/slide5.html',
+            'slides/slide6.html',
+            'slides/slide7.html'
+        ];
+        
+        let currentSlide = 0;
+        const iframe = document.getElementById('slideFrame');
+        const currentSlideEl = document.getElementById('currentSlide');
+        
+        function showSlide(index) {
+            if (index < 0) index = 0;
+            if (index >= slides.length) index = slides.length - 1;
+            
+            currentSlide = index;
+            iframe.src = slides[currentSlide];
+            currentSlideEl.textContent = currentSlide + 1;
+        }
+        
+        function nextSlide() {
+            if (currentSlide < slides.length - 1) {
+                showSlide(currentSlide + 1);
+            }
+        }
+        
+        function prevSlide() {
+            if (currentSlide > 0) {
+                showSlide(currentSlide - 1);
+            }
+        }
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prevSlide();
+            } else if (e.key === 'Escape') {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+        });
+        
+        document.getElementById('slideContainer').addEventListener('click', nextSlide);
+        
+        showSlide(0);
+    </script>
+</body>
+</html>

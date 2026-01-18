@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" type="image/webp" href="../guild-logo.webp">
+    <meta charset="UTF-8">
+
+<style>
+* { 
+  margin: 0; 
+  padding: 0; 
+  box-sizing: border-box; 
+}
+
+body {
+  font-family: Arial, sans-serif !important;
+  background-color: #1a1a1a !important;
+  color: #f5f5f5 !important;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fill-height { flex: 1; }
+.fit { flex: none; }
+.text-center { text-align: center; }
+
+/* Background colors */
+.bg-surface { background-color: #1a1a1a !important; }
+.bg-primary { background-color: #32CD32 !important; }
+.bg-secondary { background-color: #D4AF37 !important; }
+.bg-muted { background-color: #2d2d2d !important; }
+.bg-accent { background-color: #2C1810 !important; }
+.bg-border { background-color: #404040 !important; }
+
+/* Text colors */
+.text-primary { color: #32CD32 !important; }
+.text-secondary { color: #D4AF37 !important; }
+.text-surface-foreground { color: #f5f5f5 !important; }
+.text-muted-foreground { color: #a0a0a0 !important; }
+.text-accent-foreground { color: #ffffff !important; }
+.text-primary-foreground { color: #ffffff !important; }
+.text-secondary-foreground { color: #1d1d1d !important; }
+
+/* Font sizes */
+.text-xs { font-size: 12px; }
+.text-sm { font-size: 14px; }
+.text-base { font-size: 16px; }
+.text-lg { font-size: 18px; }
+.text-xl { font-size: 20px; }
+.text-2xl { font-size: 24px; }
+.text-3xl { font-size: 30px; }
+.text-4xl { font-size: 36px; }
+.text-5xl { font-size: 48px; }
+.text-6xl { font-size: 60px; }
+.text-7xl { font-size: 72px; }
+.text-8xl { font-size: 96px; }
+</style>
+<script>const whTooltips = {colorLinks: true, iconizeLinks: true, renameLinks: true};</script>
+<script src="https://wow.zamimg.com/js/tooltips.js"></script>
+
+</head>
+<body class="col bg-surface" style="width: 960px; height: 540px; position: relative;">
+    <div style="width: 920px; margin: 0 20px; padding-top: 20px;" class="fit">
+        <h1 class="text-5xl text-primary" style="margin: 0; font-weight: bold;">WEEK OVERVIEW</h1>
+    </div>
+    
+    <div class="fill-height row" style="margin: 0 32px; gap: 16px; align-items: stretch;">
+        <div class="bg-muted" style="flex: 1; padding: 24px; border-left: 8px solid var(--color-primary); display: flex; flex-direction: column; justify-content: center;">
+            <div class="text-6xl text-primary" style="font-weight: bold; margin: 0 0 8px 0;">
+                1
+            </div>
+            <div class="text-lg text-surface-foreground" style="margin: 0;">
+                Raid Sessions
+            </div>
+        </div>
+        
+        <div class="bg-muted" style="flex: 1; padding: 24px; border-left: 8px solid var(--color-secondary); display: flex; flex-direction: column; justify-content: center;">
+            <div class="text-6xl text-secondary" style="font-weight: bold; margin: 0 0 8px 0;">
+                3
+            </div>
+            <div class="text-lg text-surface-foreground" style="margin: 0;">
+                Bosses Killed
+            </div>
+        </div>
+        
+        <div class="bg-muted" style="flex: 1; padding: 24px; border-left: 8px solid var(--color-accent); display: flex; flex-direction: column; justify-content: center;">
+            <div class="text-6xl text-accent-foreground" style="font-weight: bold; margin: 0 0 8px 0;">
+                15
+            </div>
+            <div class="text-lg text-surface-foreground" style="margin: 0;">
+                Total Wipes
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-primary" style="margin: 0 32px 20px 32px; padding: 20px;">
+        <div class="text-2xl text-primary-foreground text-center" style="margin: 0; font-weight: bold;">
+            2.6 Hours of Raiding
+        </div>
+    </div>
+    
+    <div style="position: absolute; bottom: 20px; left: 20px; right: 20px;">
+        <div class="text-xs text-center" style="margin: 0; color: #000000;">
+            Data compiled from guild raid logs • Updated: 2026-01-18
+        </div>
+    </div>
+</body>
+</html>

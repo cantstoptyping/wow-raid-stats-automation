@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" type="image/webp" href="../guild-logo.webp">
+    <meta charset="UTF-8">
+
+<style>
+* { 
+  margin: 0; 
+  padding: 0; 
+  box-sizing: border-box; 
+}
+
+body {
+  font-family: Arial, sans-serif !important;
+  background-color: #1a1a1a !important;
+  color: #f5f5f5 !important;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fill-height { flex: 1; }
+.fit { flex: none; }
+.text-center { text-align: center; }
+
+/* Background colors */
+.bg-surface { background-color: #1a1a1a !important; }
+.bg-primary { background-color: #32CD32 !important; }
+.bg-secondary { background-color: #D4AF37 !important; }
+.bg-muted { background-color: #2d2d2d !important; }
+.bg-accent { background-color: #2C1810 !important; }
+.bg-border { background-color: #404040 !important; }
+
+/* Text colors */
+.text-primary { color: #32CD32 !important; }
+.text-secondary { color: #D4AF37 !important; }
+.text-surface-foreground { color: #f5f5f5 !important; }
+.text-muted-foreground { color: #a0a0a0 !important; }
+.text-accent-foreground { color: #ffffff !important; }
+.text-primary-foreground { color: #ffffff !important; }
+.text-secondary-foreground { color: #1d1d1d !important; }
+
+/* Font sizes */
+.text-xs { font-size: 12px; }
+.text-sm { font-size: 14px; }
+.text-base { font-size: 16px; }
+.text-lg { font-size: 18px; }
+.text-xl { font-size: 20px; }
+.text-2xl { font-size: 24px; }
+.text-3xl { font-size: 30px; }
+.text-4xl { font-size: 36px; }
+.text-5xl { font-size: 48px; }
+.text-6xl { font-size: 60px; }
+.text-7xl { font-size: 72px; }
+.text-8xl { font-size: 96px; }
+</style>
+<script>const whTooltips = {colorLinks: true, iconizeLinks: true, renameLinks: true};</script>
+<script src="https://wow.zamimg.com/js/tooltips.js"></script>
+
+</head>
+<body class="col bg-surface" style="width: 960px; height: 540px; position: relative;">
+    <!-- Logo in top right -->
+    <div style="position: absolute; top: 20px; right: 20px; z-index: 100;">
+        <img src="../guild-logo.webp" style="width: 80px; height: 80px; object-fit: contain;">
+    </div>
+    <div style="width: 920px; margin: 0 20px; padding-top: 20px;" class="fit">
+        <h1 class="text-5xl text-primary" style="margin: 0; font-weight: bold;">TOP 5 DPS - OVERALL</h1>
+    </div>
+    
+    <div style="margin: 0 32px;">
+        
+        <div class="row bg-muted" style="padding: 14px 16px; margin: 0 0 8px 0; align-items: center; border-left: 4px solid var(--color-secondary);">
+            <div class="text-2xl text-secondary" style="width: 40px; font-weight: bold; margin: 0;">#1</div>
+            <div style="flex: 1;">
+                <div class="text-lg text-surface-foreground" style="margin: 0 0 4px 0; font-weight: bold;">Shukeywookie</div>
+                <div class="text-sm text-muted-foreground" style="margin: 0;">Destruction Warlock - 3 bosses</div>
+            </div>
+            <div style="text-align: right;">
+                <div class="text-2xl text-primary" style="margin: 0; font-weight: bold;">6,378,111</div>
+                <div class="text-sm text-muted-foreground" style="margin: 0;">Avg DPS</div>
+            </div>
+            <div style="text-align: right; margin-left: 20px;">
+                <div class="text-xl text-surface-foreground" style="margin: 0; font-weight: bold;">8,868,991</div>
+                <div class="text-sm text-muted-foreground" style="margin: 0;">Peak</div>
+            </div>
+        </div>
+        
+        <div class="row bg-muted" style="padding: 14px 16px; margin: 0 0 8px 0; align-items: center; border-left: 4px solid var(--color-secondary);">
+            <div class="text-2xl text-secondary" style="width: 40px; font-weight: bold; margin: 0;">#2</div>
+            <div style="flex: 1;">
+                <div class="text-lg text-surface-foreground" style="margin: 0 0 4px 0; font-weight: bold;">Thegoodword</div>
+                <div class="text-sm text-muted-foreground" style="margin: 0;">Shadow Priest - 3 bosses</div>
+            </div>
+            <div style="text-align: right;">
+                <div class="text-2xl text-primary" style="margin: 0; font-weight: bold;">5,751,439</div>
+                <div class="text-sm text-muted-foreground" style="margin: 0;">Avg DPS</div>
+            </div>
+            <div style="text-align: right; margin-left: 20px;">
+                <div class="text-xl text-surface-foreground" style="margin: 0; font-weight: bold;">8,692,040</div>
+                <div class="text-sm text-muted-foreground" style="margin: 0;">Peak</div>
+            </div>
+        </div>
+        
+        <div class="row bg-muted" style="padding: 14px 16px; margin: 0 0 8px 0; align-items: center; border-left: 4px solid var(--color-secondary);">
+            <div class="text-2xl text-secondary" style="width: 40px; font-weight: bold; margin: 0;">#3</div>
+            <div style="flex: 1;">
+                <div class="text-lg text-surface-foreground" style="margin: 0 0 4px 0; font-weight: bold;">Bladesy</div>
+                <div class="text-sm text-muted-foreground" style="margin: 0;">Fury Warrior - 3 bosses</div>
+            </div>
+            <div style="text-align: right;">
+                <div class="text-2xl text-primary" style="margin: 0; font-weight: bold;">5,725,142</div>
+                <div class="text-sm text-muted-foreground" style="margin: 0;">Avg DPS</div>
+            </div>
+            <div style="text-align: right; margin-left: 20px;">
+                <div class="text-xl text-surface-foreground" style="margin: 0; font-weight: bold;">6,786,461</div>
+                <div class="text-sm text-muted-foreground" style="margin: 0;">Peak</div>
+            </div>
+        </div>
+        
+        <div class="row bg-muted" style="padding: 14px 16px; margin: 0 0 8px 0; align-items: center; border-left: 4px solid var(--color-secondary);">
+            <div class="text-2xl text-secondary" style="width: 40px; font-weight: bold; margin: 0;">#4</div>
+            <div style="flex: 1;">
+                <div class="text-lg text-surface-foreground" style="margin: 0 0 4px 0; font-weight: bold;">Veydrax</div>
+                <div class="text-sm text-muted-foreground" style="margin: 0;">Augmentation Evoker - 3 bosses</div>
+            </div>
+            <div style="text-align: right;">
+                <div class="text-2xl text-primary" style="margin: 0; font-weight: bold;">5,529,056</div>
+                <div class="text-sm text-muted-foreground" style="margin: 0;">Avg DPS</div>
+            </div>
+            <div style="text-align: right; margin-left: 20px;">
+                <div class="text-xl text-surface-foreground" style="margin: 0; font-weight: bold;">7,069,861</div>
+                <div class="text-sm text-muted-foreground" style="margin: 0;">Peak</div>
+            </div>
+        </div>
+        
+        <div class="row bg-muted" style="padding: 14px 16px; margin: 0 0 8px 0; align-items: center; border-left: 4px solid var(--color-secondary);">
+            <div class="text-2xl text-secondary" style="width: 40px; font-weight: bold; margin: 0;">#5</div>
+            <div style="flex: 1;">
+                <div class="text-lg text-surface-foreground" style="margin: 0 0 4px 0; font-weight: bold;">Quizx</div>
+                <div class="text-sm text-muted-foreground" style="margin: 0;">Marksmanship Hunter - 3 bosses</div>
+            </div>
+            <div style="text-align: right;">
+                <div class="text-2xl text-primary" style="margin: 0; font-weight: bold;">5,400,563</div>
+                <div class="text-sm text-muted-foreground" style="margin: 0;">Avg DPS</div>
+            </div>
+            <div style="text-align: right; margin-left: 20px;">
+                <div class="text-xl text-surface-foreground" style="margin: 0; font-weight: bold;">6,620,030</div>
+                <div class="text-sm text-muted-foreground" style="margin: 0;">Peak</div>
+            </div>
+        </div>
+        
+    </div>
+    
+    <div style="position: absolute; bottom: 20px; left: 20px; right: 20px;">
+        <div class="text-xs text-muted-foreground">
+            Average DPS across all boss encounters this week - Peak shows highest single-fight DPS
+        </div>
+    </div>
+</body>
+</html>
