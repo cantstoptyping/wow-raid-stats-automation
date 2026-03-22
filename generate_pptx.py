@@ -639,7 +639,7 @@ def generate_presentation():
     create_top_dps_overall_slide(week_start, week_end)
     create_death_causes_slide(week_start, week_end)
 
-    create_closing_slide()
+    # create_closing_slide() # closing slide is lame so I'm skipping it for now, can add back later if we want
     
     create_slideshow()
     
