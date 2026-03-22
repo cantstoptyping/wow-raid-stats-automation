@@ -10,7 +10,7 @@ BOSS_FILTER = [
     "Vaelgor & Ezzorak",
     "Lightblinded Vanguard",
     "Crown of the Cosmos",
-    "Chimaerus",
+    "Chimaerus, the Undreamt God",
     "Belo'ren, Child of Al'ar",
     "Midnight Falls"
 ]
