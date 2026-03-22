@@ -4,14 +4,15 @@ import config
 
 # boss filter - only these bosses will be included - difficulty filter has been added to env. update in yml as well for midnight
 BOSS_FILTER = [
-    "Plexus Sentinel",
-    "Loom'ithar",
-    "Soulbinder Naazindhri",
-    "Forgeweaver Araz",
-    "The Soul Hunters",
-    "Fractillus",
-    "Nexus-King Salhadaar",
-    "Dimensius, the All-Devouring"
+    "Imperator Averzian",
+    "Vorasius",
+    "Fallen-King Salhadaar",
+    "Vaelgor & Ezzorak",
+    "Lightblinded Vanguard",
+    "Crown of the Cosmos",
+    "Chimaerus",
+    "Belo'ren, Child of Al'ar",
+    "Midnight Falls"
 ]
 
 class WarcraftLogsAPI:
@@ -241,12 +242,13 @@ def fetch_weekly_data():
                 print(f"  Skipping {boss_name} (not in boss filter)")
                 continue
             
-            # Filter by difficulty if configured
-            if config.DIFFICULTY_FILTER is not None:
-                fight_difficulty = fight.get('difficulty', 0)
-                if fight_difficulty != config.DIFFICULTY_FILTER:
-                    print(f"  Skipping {boss_name} (difficulty {fight_difficulty}, want {config.DIFFICULTY_FILTER})")
-                    continue
+            # Commenting out difficulty filter for now - can be re-enabled if needed, but many fights don't have difficulty set properly in WCL data
+            # # Filter by difficulty if configured
+            # if config.DIFFICULTY_FILTER is not None:
+            #     fight_difficulty = fight.get('difficulty', 0)
+            #     if fight_difficulty != config.DIFFICULTY_FILTER:
+            #         print(f"  Skipping {boss_name} (difficulty {fight_difficulty}, want {config.DIFFICULTY_FILTER})")
+            #         continue
             
             print(f"  Processing fight: {boss_name}")
             
