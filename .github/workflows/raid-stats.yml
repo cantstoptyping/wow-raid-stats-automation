@@ -31,10 +31,10 @@ jobs:
       run: |
         echo "WARCRAFTLOGS_CLIENT_ID=${{ secrets.WARCRAFTLOGS_CLIENT_ID }}" >> .env
         echo "WARCRAFTLOGS_CLIENT_SECRET=${{ secrets.WARCRAFTLOGS_CLIENT_SECRET }}" >> .env
-        echo "GUILD_NAME=Offlime" >> .env
+        echo "GUILD_NAME=Limeknighters" >> .env # Offlime
         echo "GUILD_REALM=Frostmourne" >> .env
         echo "GUILD_REGION=us" >> .env
-        echo "RAID_TEAM_FILTER=Qisx" >> .env
+        echo "RAID_TEAM_FILTER=vkf00" >> .env # Qisx
         echo "WARCRAFTLOGS_API_URL=https://www.warcraftlogs.com/api/v2/client" >> .env
         echo "DATABASE_PATH=raid_stats.db" >> .env
         echo "SLIDES_DIR=slides" >> .env
