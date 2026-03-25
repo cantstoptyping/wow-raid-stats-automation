@@ -34,6 +34,9 @@ DIFFICULTY_FILTER = os.getenv('DIFFICULTY_FILTER', None)
 if DIFFICULTY_FILTER:
     DIFFICULTY_FILTER = int(DIFFICULTY_FILTER)
 
+# Raid team filter to filter reports by owner name
+RAID_TEAM_FILTER = os.getenv('RAID_TEAM_FILTER')
+
 def validate_config():
     """Validate that required configuration is present."""
     required = {

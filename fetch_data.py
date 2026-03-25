@@ -122,6 +122,14 @@ class WarcraftLogsAPI:
             reports = [r for r in reports if r.get('owner', {}).get('name', '').lower() == config.RAID_TEAM_FILTER.lower()]
             print(f"Filtered to {len(reports)} reports by owner '{config.RAID_TEAM_FILTER}'")
         
+        if config.RAID_TEAM_FILTER:
+            desired = config.RAID_TEAM_FILTER.lower()
+            reports = [
+            r for r in reports
+            if desired in r.get('owner', {}).get('name', '').lower()
+                or desired in r.get('title', '').lower()
+            ]
+
         # Filter to requested time range
         end_time = int(datetime.now().timestamp() * 1000)
         start_time = int((datetime.now() - timedelta(days=days_back)).timestamp() * 1000)
@@ -133,6 +141,9 @@ class WarcraftLogsAPI:
         
         print(f"Found {len(reports)} total reports, {len(filtered_reports)} in last {days_back} days")
         
+        print(f"got {len(reports)} reports from WCL, owner list: {[r.get('owner', {}).get('name') for r in reports]}")
+
+
         return filtered_reports if filtered_reports else reports[:10]
     
     def get_actor_mappings(self, report_code):
