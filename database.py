@@ -30,6 +30,7 @@ def init_database():
             raid_id TEXT NOT NULL,
             fight_id INTEGER,
             boss_name TEXT NOT NULL,
+            difficulty TEXT,
             kill_time INTEGER,
             wipe_count INTEGER DEFAULT 0,
             kill_duration_ms INTEGER,
@@ -124,13 +125,14 @@ def store_encounter(encounter_data):
     cursor = conn.cursor()
     
     cursor.execute('''
-        INSERT INTO encounters 
-        (raid_id, fight_id, boss_name, kill_time, wipe_count, kill_duration_ms, is_kill)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO encounters
+        (raid_id, fight_id, boss_name, difficulty, kill_time, wipe_count, kill_duration_ms, is_kill)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         encounter_data['raid_id'],
         encounter_data.get('fight_id'),
         encounter_data['boss_name'],
+        encounter_data.get('difficulty'),
         encounter_data.get('kill_time'),
         encounter_data.get('wipe_count', 0),
         encounter_data.get('kill_duration_ms'),
@@ -251,27 +253,29 @@ def get_boss_statistics(week_start, week_end):
     cursor = conn.cursor()
     
     cursor.execute('''
-        SELECT 
+        SELECT
             boss_name,
+            difficulty,
             SUM(CASE WHEN is_kill = 1 THEN 1 ELSE 0 END) as kills,
             SUM(wipe_count) as wipes,
             AVG(CASE WHEN is_kill = 1 THEN kill_duration_ms END) / 1000 as avg_kill_time_sec
         FROM encounters e
         JOIN raids r ON e.raid_id = r.raid_id
         WHERE r.start_time >= ? AND r.start_time <= ?
-        GROUP BY boss_name
-        ORDER BY boss_name
+        GROUP BY boss_name, difficulty
+        ORDER BY boss_name, difficulty
     ''', (week_start, week_end))
-    
+
     results = cursor.fetchall()
     conn.close()
-    
+
     return [
         {
             'boss': row[0],
-            'kills': row[1],
-            'wipes': row[2],
-            'avg_kill_time': row[3]
+            'difficulty': row[1],
+            'kills': row[2],
+            'wipes': row[3],
+            'avg_kill_time': row[4]
         }
         for row in results
     ]

@@ -14,10 +14,13 @@ def get_logo_html():
     return ''
 
 def get_week_range():
-    """Get the start and end timestamps for the previous week."""
+    """Get timestamps from the most recent past Wednesday to now.
+    If today is Wednesday, uses last Wednesday so the full raid week is included.
+    """
     today = datetime.now()
-    week_start = today - timedelta(days=7)
-    
+    days_back = (today.weekday() - 2) % 7 or 7  # 2 = Wednesday
+    week_start = (today - timedelta(days=days_back)).replace(hour=0, minute=0, second=0, microsecond=0)
+
     return int(week_start.timestamp() * 1000), int(today.timestamp() * 1000)
 
 def format_duration(milliseconds):
@@ -168,8 +171,9 @@ def create_boss_breakdown_slide(boss_stats):
         kill_time = format_duration(boss['avg_kill_time'] * 1000) if boss['avg_kill_time'] else 'N/A'
         boss_rows += f"""
         <div class="row bg-muted" style="padding: 12px 16px; margin: 0 0 8px 0; align-items: center;">
-            <div class="text-base text-surface-foreground" style="flex: 2; font-weight: bold; margin: 0;">
-                {boss['boss']}
+            <div style="flex: 2; margin: 0;">
+                <span class="text-base text-surface-foreground" style="font-weight: bold;">{boss['boss']}</span>
+                <span class="text-xs text-muted-foreground" style="margin-left: 8px;">{boss.get('difficulty') or ''}</span>
             </div>
             <div class="text-sm text-secondary" style="flex: 1; text-align: center; margin: 0;">
                 {boss['kills']} Kill{"s" if boss['kills'] != 1 else ""}

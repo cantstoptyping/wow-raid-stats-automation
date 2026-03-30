@@ -2,6 +2,13 @@ import requests
 from datetime import datetime, timedelta
 import config
 
+DIFFICULTY_MAP = {
+    3: 'Normal',
+    4: 'Heroic',
+    5: 'Mythic',
+    14: 'LFR'
+}
+
 # boss filter - only these bosses will be included - difficulty filter has been added to env. update in yml as well for midnight
 BOSS_FILTER = [
     "Imperator Averzian",
@@ -214,8 +221,10 @@ class WarcraftLogsAPI:
 def fetch_weekly_data():
     """Fetch and parse weekly raid data with detailed performance metrics."""
     api = WarcraftLogsAPI()
-    
-    reports = api.get_guild_reports(days_back=7)
+
+    today = datetime.now()
+    days_back = (today.weekday() - 2) % 7 or 7  # anchor to last Wednesday; if today is Wed, go back a full week
+    reports = api.get_guild_reports(days_back=days_back)
     
     parsed_data = {
         'raids': [],
@@ -261,12 +270,14 @@ def fetch_weekly_data():
             #         print(f"  Skipping {boss_name} (difficulty {fight_difficulty}, want {config.DIFFICULTY_FILTER})")
             #         continue
             
-            print(f"  Processing fight: {boss_name}")
-            
+            difficulty = DIFFICULTY_MAP.get(fight.get('difficulty'), 'Unknown')
+            print(f"  Processing fight: {boss_name} ({difficulty})")
+
             encounter_data = {
                 'raid_id': report['code'],
                 'fight_id': fight['id'],
                 'boss_name': boss_name,
+                'difficulty': difficulty,
                 'is_kill': fight.get('kill', False),
                 'kill_time': fight.get('endTime'),
                 'kill_duration_ms': fight.get('endTime', 0) - fight.get('startTime', 0),
@@ -296,6 +307,7 @@ def fetch_weekly_data():
                         'raid_id': report['code'],
                         'fight_id': fight['id'],
                         'boss_name': boss_name,
+                        'difficulty': difficulty,
                         'player_name': player_name,
                         'player_class': player_class,
                         'spec': spec,
@@ -322,6 +334,7 @@ def fetch_weekly_data():
                         'raid_id': report['code'],
                         'fight_id': fight['id'],
                         'boss_name': boss_name,
+                        'difficulty': difficulty,
                         'player_name': player_name,
                         'player_class': player_class,
                         'spec': spec,
@@ -344,6 +357,7 @@ def fetch_weekly_data():
                         'raid_id': report['code'],
                         'fight_id': fight['id'],
                         'boss_name': boss_name,
+                        'difficulty': difficulty,
                         'player_name': player_name,
                         'ability_name': ability_name,
                         'ability_id': ability_id,
