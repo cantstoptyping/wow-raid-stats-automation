@@ -341,84 +341,6 @@ def create_closing_slide():
     with open(os.path.join(config.SLIDES_DIR, 'slide7.html'), 'w') as f:
         f.write(html)
 
-def create_top_dps_overall_slide(week_start, week_end, difficulty='Heroic'):
-    """Create slide with top 5 DPS overall across all fights."""
-    logo_html = get_logo_html()
-    conn = database.sqlite3.connect(config.DATABASE_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute('''
-        SELECT
-            player_name,
-            player_class,
-            spec,
-            AVG(dps) as avg_dps,
-            MAX(dps) as max_dps,
-            COUNT(DISTINCT boss_name) as bosses_fought
-        FROM player_performance p
-        JOIN raids r ON p.raid_id = r.raid_id
-        WHERE r.start_time >= ? AND r.start_time <= ?
-        AND dps IS NOT NULL
-        AND dps > 0
-        AND role = 'DPS'
-        AND p.difficulty = ?
-        GROUP BY player_name
-        ORDER BY avg_dps DESC
-        LIMIT 5
-    ''', (week_start, week_end, difficulty))
-    
-    top_dps = cursor.fetchall()
-    conn.close()
-    
-    dps_rows = ""
-    for i, (name, pclass, spec, avg_dps, max_dps, bosses) in enumerate(top_dps, 1):
-        dps_rows += f"""
-        <div class="row bg-muted" style="padding: 14px 16px; margin: 0 0 8px 0; align-items: center; border-left: 4px solid var(--color-secondary);">
-            <div class="text-2xl text-secondary" style="width: 40px; font-weight: bold; margin: 0;">#{i}</div>
-            <div style="flex: 1;">
-                <div class="text-lg" style="margin: 0 0 4px 0; font-weight: bold; color: {get_class_color(pclass)};">{name}</div>
-                <div class="text-sm text-muted-foreground" style="margin: 0;">{spec} {pclass} - {bosses} bosses</div>
-            </div>
-            <div style="text-align: right;">
-                <div class="text-2xl text-primary" style="margin: 0; font-weight: bold;">{avg_dps:,.0f}</div>
-                <div class="text-sm text-muted-foreground" style="margin: 0;">Avg DPS</div>
-            </div>
-            <div style="text-align: right; margin-left: 20px;">
-                <div class="text-xl text-surface-foreground" style="margin: 0; font-weight: bold;">{max_dps:,.0f}</div>
-                <div class="text-sm text-muted-foreground" style="margin: 0;">Peak</div>
-            </div>
-        </div>
-        """
-    
-    html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-</head>
-<body class="col bg-surface" style="width: 960px; height: 540px; position: relative;">
-    <!-- Logo in top right -->
-    <div style="position: absolute; top: 20px; right: 20px; z-index: 100;">
-        {logo_html}
-    </div>
-    <div style="width: 920px; margin: 0 20px; padding-top: 20px;" class="fit">
-        <h1 class="text-5xl text-primary" style="margin: 0; font-weight: bold;">TOP 5 DPS <span class="text-3xl text-secondary">- {difficulty.upper()}</span></h1>
-    </div>
-    
-    <div style="margin: 0 32px;">
-        {dps_rows}
-    </div>
-    
-    <div style="position: absolute; bottom: 20px; left: 20px; right: 20px;">
-        <div class="text-xs text-muted-foreground">
-            Average DPS across all boss encounters this week - Peak shows highest single-fight DPS
-        </div>
-    </div>
-</body>
-</html>"""
-    
-    with open(os.path.join(config.SLIDES_DIR, 'slide5.html'), 'w') as f:
-        f.write(html)
-
 def create_death_causes_slide(week_start, week_end):
     """Create slide with top 10 death causes with Wowhead links."""
     logo_html = get_logo_html()
@@ -497,8 +419,8 @@ def create_death_causes_slide(week_start, week_end):
     </div>
 </body>
 </html>"""
-    
-    with open(os.path.join(config.SLIDES_DIR, 'slide7.html'), 'w') as f:
+
+    with open(os.path.join(config.SLIDES_DIR, 'slide6.html'), 'w') as f:
         f.write(html)
 
 def create_boss_mvp_slide(boss_mvps):
@@ -573,7 +495,7 @@ def create_boss_mvp_slide(boss_mvps):
 </body>
 </html>"""
 
-    with open(os.path.join(config.SLIDES_DIR, 'slide6.html'), 'w') as f:
+    with open(os.path.join(config.SLIDES_DIR, 'slide5.html'), 'w') as f:
         f.write(html)
 
 def create_slideshow():
@@ -737,7 +659,6 @@ def generate_presentation():
     create_summary_slide(summary)
     create_boss_breakdown_slide(boss_stats)
     create_top_performers_slide(dps_top, hps_top, difficulty)
-    create_top_dps_overall_slide(week_start, week_end, difficulty)
     create_boss_mvp_slide(boss_mvps)
     create_death_causes_slide(week_start, week_end)
 

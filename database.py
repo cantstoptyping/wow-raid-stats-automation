@@ -284,28 +284,55 @@ def get_boss_statistics(week_start, week_end):
     ]
 
 def get_boss_mvps(week_start, week_end):
-    """Get the highest parser (by parse percentile) per boss this week, DPS or healer."""
+    """Get the highest parser per boss. Uses parse percentile where available, falls back to top DPS."""
     conn = sqlite3.connect(config.DATABASE_PATH)
     cursor = conn.cursor()
 
     cursor.execute('''
-        SELECT
-            p.boss_name,
-            p.difficulty,
-            p.player_name,
-            p.player_class,
-            p.role,
-            p.parse_percentile,
-            p.dps,
-            p.hps
+        SELECT p.boss_name, p.difficulty, p.player_name, p.player_class, p.role, p.parse_percentile, p.dps, p.hps
         FROM player_performance p
         JOIN raids r ON p.raid_id = r.raid_id
         WHERE r.start_time >= ? AND r.start_time <= ?
           AND p.parse_percentile IS NOT NULL
-        GROUP BY p.boss_name, p.difficulty
-        HAVING p.parse_percentile = MAX(p.parse_percentile)
-        ORDER BY p.boss_name, p.difficulty
-    ''', (week_start, week_end))
+          AND p.parse_percentile = (
+              SELECT MAX(p2.parse_percentile)
+              FROM player_performance p2
+              JOIN raids r2 ON p2.raid_id = r2.raid_id
+              WHERE r2.start_time >= ? AND r2.start_time <= ?
+                AND p2.boss_name = p.boss_name
+                AND p2.difficulty = p.difficulty
+          )
+
+        UNION
+
+        SELECT p.boss_name, p.difficulty, p.player_name, p.player_class, p.role, p.parse_percentile, p.dps, p.hps
+        FROM player_performance p
+        JOIN raids r ON p.raid_id = r.raid_id
+        WHERE r.start_time >= ? AND r.start_time <= ?
+          AND p.dps IS NOT NULL AND p.dps > 0
+          AND NOT EXISTS (
+              SELECT 1 FROM player_performance p3
+              JOIN raids r3 ON p3.raid_id = r3.raid_id
+              WHERE r3.start_time >= ? AND r3.start_time <= ?
+                AND p3.boss_name = p.boss_name
+                AND p3.difficulty = p.difficulty
+                AND p3.parse_percentile IS NOT NULL
+          )
+          AND p.dps = (
+              SELECT MAX(p4.dps)
+              FROM player_performance p4
+              JOIN raids r4 ON p4.raid_id = r4.raid_id
+              WHERE r4.start_time >= ? AND r4.start_time <= ?
+                AND p4.boss_name = p.boss_name
+                AND p4.difficulty = p.difficulty
+          )
+
+        ORDER BY boss_name, difficulty
+    ''', (week_start, week_end,
+          week_start, week_end,
+          week_start, week_end,
+          week_start, week_end,
+          week_start, week_end))
 
     results = cursor.fetchall()
     conn.close()
