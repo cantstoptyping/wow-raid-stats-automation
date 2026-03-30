@@ -54,7 +54,7 @@ def init_database():
             role TEXT,
             dps REAL,
             hps REAL,
-            parse_percentile REAL,
+            percentile REAL,
             deaths INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (raid_id) REFERENCES raids(raid_id),
@@ -153,7 +153,7 @@ def store_player_performance(performance_data):
     
     cursor.execute('''
         INSERT INTO player_performance
-        (raid_id, encounter_id, boss_name, difficulty, player_name, player_class, spec, role, dps, hps, parse_percentile, deaths)
+        (raid_id, encounter_id, boss_name, difficulty, player_name, player_class, spec, role, dps, hps, percentile, deaths)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         performance_data['raid_id'],
@@ -166,7 +166,7 @@ def store_player_performance(performance_data):
         performance_data.get('role'),
         performance_data.get('dps'),
         performance_data.get('hps'),
-        performance_data.get('parse_percentile'),
+        performance_data.get('percentile'),
         performance_data.get('deaths', 0)
     ))
     
@@ -217,7 +217,7 @@ def get_top_performers(week_start, week_end, metric='dps', limit=5, difficulty='
     conn = sqlite3.connect(config.DATABASE_PATH)
     cursor = conn.cursor()
 
-    order_column = metric if metric in ['dps', 'hps', 'parse_percentile'] else 'dps'
+    order_column = metric if metric in ['dps', 'hps', 'percentile'] else 'dps'
 
     cursor.execute(f'''
         SELECT
@@ -289,13 +289,13 @@ def get_boss_mvps(week_start, week_end):
     cursor = conn.cursor()
 
     cursor.execute('''
-        SELECT p.boss_name, p.difficulty, p.player_name, p.player_class, p.role, p.parse_percentile, p.dps, p.hps
+        SELECT p.boss_name, p.difficulty, p.player_name, p.player_class, p.role, p.percentile, p.dps, p.hps
         FROM player_performance p
         JOIN raids r ON p.raid_id = r.raid_id
         WHERE r.start_time >= ? AND r.start_time <= ?
-          AND p.parse_percentile IS NOT NULL
-          AND p.parse_percentile = (
-              SELECT MAX(p2.parse_percentile)
+          AND p.percentile IS NOT NULL
+          AND p.percentile = (
+              SELECT MAX(p2.percentile)
               FROM player_performance p2
               JOIN raids r2 ON p2.raid_id = r2.raid_id
               WHERE r2.start_time >= ? AND r2.start_time <= ?
@@ -305,7 +305,7 @@ def get_boss_mvps(week_start, week_end):
 
         UNION
 
-        SELECT p.boss_name, p.difficulty, p.player_name, p.player_class, p.role, p.parse_percentile, p.dps, p.hps
+        SELECT p.boss_name, p.difficulty, p.player_name, p.player_class, p.role, p.percentile, p.dps, p.hps
         FROM player_performance p
         JOIN raids r ON p.raid_id = r.raid_id
         WHERE r.start_time >= ? AND r.start_time <= ?
@@ -316,7 +316,7 @@ def get_boss_mvps(week_start, week_end):
               WHERE r3.start_time >= ? AND r3.start_time <= ?
                 AND p3.boss_name = p.boss_name
                 AND p3.difficulty = p.difficulty
-                AND p3.parse_percentile IS NOT NULL
+                AND p3.percentile IS NOT NULL
           )
           AND p.dps = (
               SELECT MAX(p4.dps)
@@ -344,7 +344,7 @@ def get_boss_mvps(week_start, week_end):
             'player_name':      row[2],
             'player_class':     row[3],
             'role':             row[4],
-            'parse_percentile': row[5],
+            'percentile': row[5],
             'dps':              row[6],
             'hps':              row[7],
         }

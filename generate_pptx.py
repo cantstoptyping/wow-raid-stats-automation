@@ -432,7 +432,7 @@ def create_boss_mvp_slide(boss_mvps):
         player_name = mvp['player_name'] or '—'
         player_color = get_class_color(mvp['player_class']) if mvp['player_name'] else '#a0a0a0'
         difficulty = mvp.get('difficulty') or ''
-        parse = mvp['parse_percentile']
+        parse = mvp['percentile']
         role = mvp.get('role', '')
 
         # Color the parse score gold/purple/blue by tier

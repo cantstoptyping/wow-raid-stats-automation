@@ -340,7 +340,7 @@ def fetch_weekly_data():
                         'role': 'DPS',
                         'dps': total_damage / fight_duration,
                         'total_damage': total_damage,
-                        'parse_percentile': entry.get('rankPercent')
+                        'percentile': entry.get('rankPercent')
                     })
 
             # Parse healing data
@@ -368,7 +368,7 @@ def fetch_weekly_data():
                         'role': 'Healer',
                         'hps': total_healing / fight_duration,
                         'total_healing': total_healing,
-                        'parse_percentile': entry.get('rankPercent')
+                        'percentile': entry.get('rankPercent')
                     })
 
             # Parse death data with proper name mapping
