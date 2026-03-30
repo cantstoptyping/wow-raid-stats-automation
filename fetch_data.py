@@ -316,7 +316,11 @@ def fetch_weekly_data():
             if dps_table and isinstance(dps_table, dict) and 'data' in dps_table:
                 entries = dps_table.get('data', {}).get('entries', [])
                 fight_duration = max((fight['endTime'] - fight['startTime']) / 1000, 1)
-                
+                # DEBUG: print first entry keys to verify rankPercent availability - remove once confirmed
+                if entries:
+                    print(f"  DEBUG entry keys: {list(entries[0].keys())}")
+                    print(f"  DEBUG rankPercent sample: {entries[0].get('rankPercent')}")
+
                 for entry in entries:
                     if entry.get('type') in ('NPC', 'Boss'):  # skip non-players - can add 'Pet' to exclde pets if its breaking it
                         continue

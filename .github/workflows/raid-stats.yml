@@ -38,7 +38,8 @@ jobs:
         echo "WARCRAFTLOGS_API_URL=https://www.warcraftlogs.com/api/v2/client" >> .env
         echo "DATABASE_PATH=raid_stats.db" >> .env
         echo "SLIDES_DIR=slides" >> .env
-        echo "OUTPUT_DIR=output" >> .env  # echo "DIFFICULTY_FILTER=5" >> .env # Uncomment and set to filter by difficulty (e.g. 5 for Mythic)
+        echo "OUTPUT_DIR=output" >> .env  
+        echo "DIFFICULTY_FILTER=4" >> .env # Uncomment and set to filter by difficulty (e.g. 5 for Mythic)
     
     - name: Generate raid stats
       run: python main.py
