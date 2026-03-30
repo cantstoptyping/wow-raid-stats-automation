@@ -254,16 +254,16 @@ def get_boss_statistics(week_start, week_end):
     
     cursor.execute('''
         SELECT
-            boss_name,
-            difficulty,
-            SUM(CASE WHEN is_kill = 1 THEN 1 ELSE 0 END) as kills,
-            SUM(wipe_count) as wipes,
-            AVG(CASE WHEN is_kill = 1 THEN kill_duration_ms END) / 1000 as avg_kill_time_sec
+            e.boss_name,
+            e.difficulty,
+            SUM(CASE WHEN e.is_kill = 1 THEN 1 ELSE 0 END) as kills,
+            SUM(e.wipe_count) as wipes,
+            AVG(CASE WHEN e.is_kill = 1 THEN e.kill_duration_ms END) / 1000 as avg_kill_time_sec
         FROM encounters e
         JOIN raids r ON e.raid_id = r.raid_id
         WHERE r.start_time >= ? AND r.start_time <= ?
-        GROUP BY boss_name, difficulty
-        ORDER BY boss_name, difficulty
+        GROUP BY e.boss_name, e.difficulty
+        ORDER BY e.boss_name, e.difficulty
     ''', (week_start, week_end))
 
     results = cursor.fetchall()
