@@ -265,6 +265,8 @@ def fetch_weekly_data():
                 fight_duration = max((fight['endTime'] - fight['startTime']) / 1000, 1)
                 
                 for entry in entries:
+                    if entry.get('type') in ('NPC', 'Boss'):  # skip non-players - can add 'Pet' to exclde pets if its breaking it
+                        continue
                     player_name = entry.get('name', 'Unknown')
                     player_class = entry.get('type', 'Unknown')
                     spec = entry.get('icon', '').split('-')[-1] if entry.get('icon') else 'Unknown'
@@ -289,6 +291,8 @@ def fetch_weekly_data():
                 fight_duration = max((fight['endTime'] - fight['startTime']) / 1000, 1)
                 
                 for entry in entries:
+                    if entry.get('type') in ('NPC', 'Boss'):  # skip non-players
+                        continue
                     player_name = entry.get('name', 'Unknown')
                     player_class = entry.get('type', 'Unknown')
                     spec = entry.get('icon', '').split('-')[-1] if entry.get('icon') else 'Unknown'
@@ -314,7 +318,7 @@ def fetch_weekly_data():
                     ability_id = death.get('killingAbilityGameID', 0)
                     
                     player_name = actor_map.get(target_id, f'Unknown (ID: {target_id})')
-                    ability_name = ability_map.get(ability_id, f'Unknown (ID: {ability_id})')
+                    ability_name = ability_map.get(ability_id) or ('Environmental / Unknown' if ability_id == 0 else f'Unknown (ID: {ability_id})')
                     
                     parsed_data['deaths'].append({
                         'raid_id': report['code'],
