@@ -17,9 +17,6 @@ env/
 output/
 slides/
 
-# html2pptx library (extracted)
-html2pptx/
-
 # Node
 node_modules/
 package-lock.json

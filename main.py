@@ -107,6 +107,12 @@ body {
             content = re.sub(r'<style>.*?</style>', '', content, flags=re.DOTALL)
             content = re.sub(r'<script.*?tooltips\.js.*?</script>', '', content, flags=re.DOTALL)
             
+            # add favicon
+            if '<link rel="icon"' not in content and '<head>' in content:
+                favicon_tag = '<link rel="icon" type="image/webp" href="../guild-logo.webp">'
+                content = content.replace('<head>', f'<head>\n    {favicon_tag}')
+
+
             # Add inline CSS and Wowhead script
             if '<head>' in content:
                 content = content.replace('</head>', f'{inline_css}\n</head>')
@@ -197,8 +203,6 @@ def main():
                 print(f"    Error storing death: {e}")
                 print(f"    Death data: {death}")
                 break  # Stop after first error to see it
-
- 
         
         print("✓ Data stored successfully")
         print(f"  - {len(data['raids'])} raids")

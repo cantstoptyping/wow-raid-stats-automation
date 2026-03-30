@@ -2,16 +2,17 @@ import requests
 from datetime import datetime, timedelta
 import config
 
-# Boss filter - only these bosses will be included
+# boss filter - only these bosses will be included - difficulty filter has been added to env. update in yml as well for midnight
 BOSS_FILTER = [
-    "Plexus Sentinel",
-    "Loom'ithar",
-    "Soulbinder Naazindhri",
-    "Forgeweaver Araz",
-    "The Soul Hunters",
-    "Fractillus",
-    "Nexus-King Salhadaar",
-    "Dimensius, the All-Devouring"
+    "Imperator Averzian",
+    "Vorasius",
+    "Fallen-King Salhadaar",
+    "Vaelgor & Ezzorak",
+    "Lightblinded Vanguard",
+    "Crown of the Cosmos",
+    "Chimaerus, the Undreamt God",
+    "Belo'ren, Child of Al'ar",
+    "Midnight Falls"
 ]
 
 class WarcraftLogsAPI:
@@ -121,6 +122,14 @@ class WarcraftLogsAPI:
             reports = [r for r in reports if r.get('owner', {}).get('name', '').lower() == config.RAID_TEAM_FILTER.lower()]
             print(f"Filtered to {len(reports)} reports by owner '{config.RAID_TEAM_FILTER}'")
         
+        if config.RAID_TEAM_FILTER:
+            desired = config.RAID_TEAM_FILTER.lower()
+            reports = [
+            r for r in reports
+            if desired in r.get('owner', {}).get('name', '').lower()
+                or desired in r.get('title', '').lower()
+            ]
+
         # Filter to requested time range
         end_time = int(datetime.now().timestamp() * 1000)
         start_time = int((datetime.now() - timedelta(days=days_back)).timestamp() * 1000)
@@ -132,6 +141,9 @@ class WarcraftLogsAPI:
         
         print(f"Found {len(reports)} total reports, {len(filtered_reports)} in last {days_back} days")
         
+        print(f"got {len(reports)} reports from WCL, owner list: {[r.get('owner', {}).get('name') for r in reports]}")
+
+
         return filtered_reports if filtered_reports else reports[:10]
     
     def get_actor_mappings(self, report_code):
@@ -240,6 +252,14 @@ def fetch_weekly_data():
             if BOSS_FILTER and boss_name not in BOSS_FILTER:
                 print(f"  Skipping {boss_name} (not in boss filter)")
                 continue
+            
+            # Commenting out difficulty filter for now - can be re-enabled if needed, but many fights don't have difficulty set properly in WCL data
+            # # Filter by difficulty if configured
+            # if config.DIFFICULTY_FILTER is not None:
+            #     fight_difficulty = fight.get('difficulty', 0)
+            #     if fight_difficulty != config.DIFFICULTY_FILTER:
+            #         print(f"  Skipping {boss_name} (difficulty {fight_difficulty}, want {config.DIFFICULTY_FILTER})")
+            #         continue
             
             print(f"  Processing fight: {boss_name}")
             

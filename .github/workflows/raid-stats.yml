@@ -31,24 +31,42 @@ jobs:
       run: |
         echo "WARCRAFTLOGS_CLIENT_ID=${{ secrets.WARCRAFTLOGS_CLIENT_ID }}" >> .env
         echo "WARCRAFTLOGS_CLIENT_SECRET=${{ secrets.WARCRAFTLOGS_CLIENT_SECRET }}" >> .env
-        echo "GUILD_NAME=Limeknighters" >> .env
+        echo "GUILD_NAME=Limeknighters" >> .env # Offlime
         echo "GUILD_REALM=Frostmourne" >> .env
         echo "GUILD_REGION=us" >> .env
-        echo "RAID_TEAM_FILTER=vkf00" >> .env
+        echo "RAID_TEAM_FILTER=vkf00" >> .env # Qisx
         echo "WARCRAFTLOGS_API_URL=https://www.warcraftlogs.com/api/v2/client" >> .env
         echo "DATABASE_PATH=raid_stats.db" >> .env
         echo "SLIDES_DIR=slides" >> .env
-        echo "OUTPUT_DIR=output" >> .env
+        echo "OUTPUT_DIR=output" >> .env  # echo "DIFFICULTY_FILTER=5" >> .env # Uncomment and set to filter by difficulty (e.g. 5 for Mythic)
     
     - name: Generate raid stats
       run: python main.py
     
+    - name: Prepare deployment
+      run: |
+        mkdir -p deploy
+        cp slideshow.html deploy/
+        cp -r slides deploy/
+        
+        # Copy guild logo if it exists
+        if [ -f guild-logo.webp ]; then
+          cp guild-logo.webp deploy/
+          echo "✓ Copied guild-logo.webp"
+        else
+          echo "Warning: guild-logo.webp not found"
+        fi
+        
+        touch deploy/.nojekyll
+        
+        echo "Deployment folder contents:"
+        ls -la deploy/
+        
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./
-        keep_files: false
+        publish_dir: ./deploy  # <-- Changed from ./
         force_orphan: true
     
     - name: Post to Discord
@@ -56,7 +74,8 @@ jobs:
       env:
         DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
       run: |
-        PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/slideshow.html"
+        TIMESTAMP=$(date +%s)
+        PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/slideshow.html?v=${TIMESTAMP}"
         curl -H "Content-Type: application/json" \
-             -d "{\"content\": \"📊 **New Raid Stats Posted!**\n\n🔗 View the stats: $PAGES_URL\n\n✨ Updated: $(date '+%Y-%m-%d %H:%M UTC')\"}" \
+             -d "{\"content\": \"**New Raid Stats Posted!**\n\n View the stats: $PAGES_URL\n\nUpdated: $(date '+%Y-%m-%d %H:%M UTC')\"}" \
              $DISCORD_WEBHOOK
