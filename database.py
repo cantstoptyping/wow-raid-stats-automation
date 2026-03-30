@@ -96,6 +96,16 @@ def init_database():
 
 
 
+    # Migrations if needed - shouldnt if it's autocreating, but if I persist the db in the future it might need it
+    migrations = [
+        "ALTER TABLE encounters ADD COLUMN difficulty TEXT",
+    ]
+    for migration in migrations:
+        try:
+            cursor.execute(migration)
+        except sqlite3.OperationalError:
+            pass  # column already exists
+
     conn.commit()
     conn.close()
 

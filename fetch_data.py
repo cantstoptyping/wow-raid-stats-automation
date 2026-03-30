@@ -197,6 +197,7 @@ class WarcraftLogsAPI:
             report(code: $code) {
               table(fightIDs: $fightIDs, dataType: DamageDone)
               healingTable: table(fightIDs: $fightIDs, dataType: Healing)
+              rankings(fightIDs: $fightIDs)
               deaths: events(fightIDs: $fightIDs, dataType: Deaths, limit: 1000) {
                 data
               }
@@ -286,7 +287,6 @@ def fetch_weekly_data():
             
             parsed_data['encounters'].append(encounter_data)
                       
-            # MOVED INSIDE THE FIGHT LOOP - NOTICE THE INDENTATION
             fight_details = api.get_fight_details(report['code'], fight['id'])
 
             # Parse DPS and healing only on kills — wipes skew averages and players complained lol
@@ -311,15 +311,27 @@ def fetch_weekly_data():
                         })
                 continue
 
+            # Build role-specific name → rankPercent lookups from the rankings endpoint
+            dps_rank_lookup = {}
+            heal_rank_lookup = {}
+            rankings_raw = fight_details.get('rankings', {})
+            for fight_rankings in rankings_raw.get('data', []):
+                roles = fight_rankings.get('roles', {})
+                for role_key, role_data in roles.items():
+                    for char in role_data.get('characters', []):
+                        name = char.get('name')
+                        pct = char.get('rankPercent')
+                        if name and pct is not None:
+                            if role_key == 'healers':
+                                heal_rank_lookup[name] = pct
+                            else:  # dps and tanks
+                                dps_rank_lookup[name] = pct
+
             # Parse DPS data
             dps_table = fight_details.get('table', {})
             if dps_table and isinstance(dps_table, dict) and 'data' in dps_table:
                 entries = dps_table.get('data', {}).get('entries', [])
                 fight_duration = max((fight['endTime'] - fight['startTime']) / 1000, 1)
-                # DEBUG: print first entry keys to verify rankPercent availability - remove once confirmed
-                if entries:
-                    print(f"  DEBUG entry keys: {list(entries[0].keys())}")
-                    print(f"  DEBUG rankPercent sample: {entries[0].get('rankPercent')}")
 
                 for entry in entries:
                     if entry.get('type') in ('NPC', 'Boss'):  # skip non-players - can add 'Pet' to exclde pets if its breaking it
@@ -340,7 +352,7 @@ def fetch_weekly_data():
                         'role': 'DPS',
                         'dps': total_damage / fight_duration,
                         'total_damage': total_damage,
-                        'percentile': entry.get('rankPercent')
+                        'percentile': dps_rank_lookup.get(player_name)
                     })
 
             # Parse healing data
@@ -368,7 +380,7 @@ def fetch_weekly_data():
                         'role': 'Healer',
                         'hps': total_healing / fight_duration,
                         'total_healing': total_healing,
-                        'percentile': entry.get('rankPercent')
+                        'percentile': heal_rank_lookup.get(player_name)
                     })
 
             # Parse death data with proper name mapping

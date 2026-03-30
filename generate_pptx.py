@@ -1,6 +1,5 @@
 """Generate PowerPoint presentations from raid statistics."""
 import os
-import json
 from datetime import datetime, timedelta
 import database
 import config
@@ -435,15 +434,20 @@ def create_boss_mvp_slide(boss_mvps):
         parse = mvp['percentile']
         role = mvp.get('role', '')
 
-        # Color the parse score gold/purple/blue by tier
         if parse is not None:
             parse_str = f"{parse:.0f}"
-            if parse >= 95:
-                parse_color = "#E268A8"   # legendary pink
+            if parse == 100:
+                parse_color = "#FFD000"   # gold
+            elif parse >= 99:
+                parse_color = "#E268A8"   # pink
+            elif parse >= 95:
+                parse_color = "#FF8000"   # orange
             elif parse >= 75:
-                parse_color = "#FF8000"   # epic orange
+                parse_color = "#680a94ff"   # purple 
             elif parse >= 50:
-                parse_color = "#1eff00"   # rare green (above median)
+                parse_color = "#003cff"   # blue   
+            elif parse >= 25:
+                parse_color = "#1eff00"   # green
             else:
                 parse_color = "#a0a0a0"   # grey
         else:
