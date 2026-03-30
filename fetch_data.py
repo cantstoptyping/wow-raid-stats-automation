@@ -263,12 +263,12 @@ def fetch_weekly_data():
                 continue
             
             # Commenting out difficulty filter for now - can be re-enabled if needed, but many fights don't have difficulty set properly in WCL data
-            # # Filter by difficulty if configured
-            # if config.DIFFICULTY_FILTER is not None:
-            #     fight_difficulty = fight.get('difficulty', 0)
-            #     if fight_difficulty != config.DIFFICULTY_FILTER:
-            #         print(f"  Skipping {boss_name} (difficulty {fight_difficulty}, want {config.DIFFICULTY_FILTER})")
-            #         continue
+            # Filter by difficulty if configured
+            if config.DIFFICULTY_FILTER is not None:
+                fight_difficulty = fight.get('difficulty', 0)
+                if fight_difficulty != config.DIFFICULTY_FILTER:
+                    print(f"  Skipping {boss_name} (difficulty {fight_difficulty}, want {config.DIFFICULTY_FILTER})")
+                    continue
             
             difficulty = DIFFICULTY_MAP.get(fight.get('difficulty'), 'Unknown')
             print(f"  Processing fight: {boss_name} ({difficulty})")
