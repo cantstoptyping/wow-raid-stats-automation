@@ -223,9 +223,7 @@ def fetch_weekly_data():
     """Fetch and parse weekly raid data with detailed performance metrics."""
     api = WarcraftLogsAPI()
 
-    today = datetime.now()
-    days_back = (today.weekday() - 2) % 7 or 7  # anchor to last Wednesday; if today is Wed, go back a full week
-    reports = api.get_guild_reports(days_back=days_back)
+    reports = api.get_guild_reports(days_back=7)
     
     parsed_data = {
         'raids': [],
