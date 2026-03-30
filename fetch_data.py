@@ -302,7 +302,7 @@ def fetch_weekly_data():
                     player_class = entry.get('type', 'Unknown')
                     spec = entry.get('icon', '').split('-')[-1] if entry.get('icon') else 'Unknown'
                     total_damage = entry.get('total', 0)
-                    
+
                     parsed_data['players'].append({
                         'raid_id': report['code'],
                         'fight_id': fight['id'],
@@ -313,7 +313,8 @@ def fetch_weekly_data():
                         'spec': spec,
                         'role': 'DPS',
                         'dps': total_damage / fight_duration,
-                        'total_damage': total_damage
+                        'total_damage': total_damage,
+                        'parse_percentile': entry.get('rankPercent')
                     })
 
             # Parse healing data
@@ -329,7 +330,7 @@ def fetch_weekly_data():
                     player_class = entry.get('type', 'Unknown')
                     spec = entry.get('icon', '').split('-')[-1] if entry.get('icon') else 'Unknown'
                     total_healing = entry.get('total', 0)
-                    
+
                     parsed_data['players'].append({
                         'raid_id': report['code'],
                         'fight_id': fight['id'],
@@ -340,7 +341,8 @@ def fetch_weekly_data():
                         'spec': spec,
                         'role': 'Healer',
                         'hps': total_healing / fight_duration,
-                        'total_healing': total_healing
+                        'total_healing': total_healing,
+                        'parse_percentile': entry.get('rankPercent')
                     })
 
             # Parse death data with proper name mapping

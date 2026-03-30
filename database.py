@@ -280,6 +280,47 @@ def get_boss_statistics(week_start, week_end):
         for row in results
     ]
 
+def get_boss_mvps(week_start, week_end):
+    """Get the highest parser (by parse percentile) per boss this week, DPS or healer."""
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT
+            p.boss_name,
+            p.difficulty,
+            p.player_name,
+            p.player_class,
+            p.role,
+            p.parse_percentile,
+            p.dps,
+            p.hps
+        FROM player_performance p
+        JOIN raids r ON p.raid_id = r.raid_id
+        WHERE r.start_time >= ? AND r.start_time <= ?
+          AND p.parse_percentile IS NOT NULL
+        GROUP BY p.boss_name, p.difficulty
+        HAVING p.parse_percentile = MAX(p.parse_percentile)
+        ORDER BY p.boss_name, p.difficulty
+    ''', (week_start, week_end))
+
+    results = cursor.fetchall()
+    conn.close()
+
+    return [
+        {
+            'boss_name':        row[0],
+            'difficulty':       row[1],
+            'player_name':      row[2],
+            'player_class':     row[3],
+            'role':             row[4],
+            'parse_percentile': row[5],
+            'dps':              row[6],
+            'hps':              row[7],
+        }
+        for row in results
+    ]
+
 def store_death(death_data):
     """Store death event data."""
     conn = sqlite3.connect(config.DATABASE_PATH)
@@ -318,7 +359,7 @@ def get_top_death_causes(week_start, week_end, limit=10):
         JOIN raids r ON d.raid_id = r.raid_id
         WHERE r.start_time >= ? AND r.start_time <= ?
         AND ability_name IS NOT NULL
-        AND ability_name != 'Unknown'
+        AND ability_id != 0
         GROUP BY ability_name, boss_name, ability_id
         ORDER BY death_count DESC
         LIMIT ?

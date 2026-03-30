@@ -5,6 +5,25 @@ from datetime import datetime, timedelta
 import database
 import config
 
+CLASS_COLORS = {
+    "DeathKnight": "#C41E3A",
+    "DemonHunter": "#A330C9",
+    "Druid":       "#FF7C0A",
+    "Evoker":      "#33937F",
+    "Hunter":      "#AAD372",
+    "Mage":        "#3FC7EB",
+    "Monk":        "#00FF98",
+    "Paladin":     "#F48CBA",
+    "Priest":      "#FFFFFF",
+    "Rogue":       "#FFF468",
+    "Shaman":      "#0070DD",
+    "Warlock":     "#8788EE",
+    "Warrior":     "#C69B3A",
+}
+
+def get_class_color(player_class):
+    return CLASS_COLORS.get(player_class, "#f5f5f5")
+
 def get_logo_html():
     """Get HTML for guild logo."""
     import os
@@ -230,7 +249,7 @@ def create_top_performers_slide(dps_top, hps_top):
         dps_rows += f"""
         <div class="row bg-muted" style="padding: 10px 14px; margin: 0 0 6px 0; align-items: center;">
             <div class="text-lg text-secondary" style="width: 30px; font-weight: bold; margin: 0;">#{i}</div>
-            <div class="text-base text-surface-foreground" style="flex: 1; margin: 0;">{player['name']}</div>
+            <div class="text-base" style="flex: 1; margin: 0; color: {get_class_color(player['class'])};">{player['name']}</div>
             <div class="text-base text-primary" style="width: 100px; text-align: right; font-weight: bold; margin: 0;">
                 {player['avg']:,.0f}
             </div>
@@ -242,7 +261,7 @@ def create_top_performers_slide(dps_top, hps_top):
         hps_rows += f"""
         <div class="row bg-muted" style="padding: 10px 14px; margin: 0 0 6px 0; align-items: center;">
             <div class="text-lg text-secondary" style="width: 30px; font-weight: bold; margin: 0;">#{i}</div>
-            <div class="text-base text-surface-foreground" style="flex: 1; margin: 0;">{player['name']}</div>
+            <div class="text-base" style="flex: 1; margin: 0; color: {get_class_color(player['class'])};">{player['name']}</div>
             <div class="text-base text-primary" style="width: 100px; text-align: right; font-weight: bold; margin: 0;">
                 {player['avg']:,.0f}
             </div>
@@ -357,7 +376,7 @@ def create_top_dps_overall_slide(week_start, week_end):
         <div class="row bg-muted" style="padding: 14px 16px; margin: 0 0 8px 0; align-items: center; border-left: 4px solid var(--color-secondary);">
             <div class="text-2xl text-secondary" style="width: 40px; font-weight: bold; margin: 0;">#{i}</div>
             <div style="flex: 1;">
-                <div class="text-lg text-surface-foreground" style="margin: 0 0 4px 0; font-weight: bold;">{name}</div>
+                <div class="text-lg" style="margin: 0 0 4px 0; font-weight: bold; color: {get_class_color(pclass)};">{name}</div>
                 <div class="text-sm text-muted-foreground" style="margin: 0;">{spec} {pclass} - {bosses} bosses</div>
             </div>
             <div style="text-align: right;">
@@ -479,8 +498,84 @@ def create_death_causes_slide(week_start, week_end):
 </body>
 </html>"""
     
+    with open(os.path.join(config.SLIDES_DIR, 'slide7.html'), 'w') as f:
+        f.write(html)
+
+def create_boss_mvp_slide(boss_mvps):
+    """Create slide showing top DPS and HPS performer per boss."""
+    logo_html = get_logo_html()
+
+    boss_cards = ""
+    for mvp in boss_mvps:
+        player_name = mvp['player_name'] or '—'
+        player_color = get_class_color(mvp['player_class']) if mvp['player_name'] else '#a0a0a0'
+        difficulty = mvp.get('difficulty') or ''
+        parse = mvp['parse_percentile']
+        role = mvp.get('role', '')
+
+        # Color the parse score gold/purple/blue by tier
+        if parse is not None:
+            parse_str = f"{parse:.0f}"
+            if parse >= 95:
+                parse_color = "#E268A8"   # legendary pink
+            elif parse >= 75:
+                parse_color = "#FF8000"   # epic orange
+            elif parse >= 50:
+                parse_color = "#1eff00"   # rare green (above median)
+            else:
+                parse_color = "#a0a0a0"   # grey
+        else:
+            parse_str = "—"
+            parse_color = "#a0a0a0"
+
+        # Show the relevant stat
+        if role == 'DPS' and mvp['dps']:
+            stat_str = f"{mvp['dps']:,.0f} DPS"
+        elif role == 'Healer' and mvp['hps']:
+            stat_str = f"{mvp['hps']:,.0f} HPS"
+        else:
+            stat_str = ''
+
+        boss_cards += f"""
+        <div class="bg-muted" style="width: 289px; padding: 10px 12px; box-sizing: border-box;">
+            <div style="margin: 0 0 6px 0; border-bottom: 2px solid var(--color-secondary); padding-bottom: 4px;">
+                <span class="text-base text-secondary" style="font-weight: bold;">{mvp['boss_name']}</span>
+                <span class="text-xs text-muted-foreground" style="margin-left: 6px;">{difficulty}</span>
+            </div>
+            <div class="row" style="justify-content: space-between; align-items: center;">
+                <div>
+                    <span class="text-sm" style="color: {player_color}; font-weight: bold;">{player_name}</span>
+                    <div class="text-xs text-muted-foreground" style="margin-top: 2px;">{stat_str}</div>
+                </div>
+                <div style="text-align: right;">
+                    <span class="text-xl" style="color: {parse_color}; font-weight: bold;">{parse_str}</span>
+                    <div class="text-xs text-muted-foreground">parse</div>
+                </div>
+            </div>
+        </div>
+        """
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+</head>
+<body class="col bg-surface" style="width: 960px; height: 540px; position: relative;">
+    <div style="position: absolute; top: 20px; right: 20px; z-index: 100;">
+        {logo_html}
+    </div>
+    <div style="width: 920px; margin: 0 20px; padding-top: 20px;" class="fit">
+        <h1 class="text-5xl text-primary" style="margin: 0; font-weight: bold;">BOSS MVPs</h1>
+    </div>
+    <div style="margin: 8px 20px 20px 20px; display: flex; flex-wrap: wrap; gap: 8px; flex: 1; align-content: flex-start;">
+        {boss_cards}
+    </div>
+</body>
+</html>"""
+
     with open(os.path.join(config.SLIDES_DIR, 'slide6.html'), 'w') as f:
         f.write(html)
+
 def create_slideshow():
     """Create an HTML slideshow viewer."""
     import os
@@ -621,6 +716,7 @@ def generate_presentation():
     # Get data from database
     summary = database.get_weekly_summary(week_start, week_end)
     boss_stats = database.get_boss_statistics(week_start, week_end)
+    boss_mvps = database.get_boss_mvps(week_start, week_end)
     dps_top = database.get_top_performers(week_start, week_end, 'dps', 5)
     hps_top = database.get_top_performers(week_start, week_end, 'hps', 5)
     
@@ -641,6 +737,7 @@ def generate_presentation():
     create_boss_breakdown_slide(boss_stats)
     create_top_performers_slide(dps_top, hps_top)
     create_top_dps_overall_slide(week_start, week_end)
+    create_boss_mvp_slide(boss_mvps)
     create_death_causes_slide(week_start, week_end)
 
     # create_closing_slide() # closing slide is lame so I'm skipping it for now, can add back later if we want
