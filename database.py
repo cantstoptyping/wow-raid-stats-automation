@@ -327,7 +327,7 @@ def get_boss_mvps(week_start, week_end):
                 AND p4.difficulty = p.difficulty
           )
 
-        ORDER BY boss_name, difficulty
+        ORDER BY 1, 2
     ''', (week_start, week_end,
           week_start, week_end,
           week_start, week_end,
