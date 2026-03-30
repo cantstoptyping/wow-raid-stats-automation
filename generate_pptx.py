@@ -242,7 +242,7 @@ def create_boss_breakdown_slide(boss_stats):
     with open(os.path.join(config.SLIDES_DIR, 'slide3.html'), 'w') as f:
         f.write(html)
 
-def create_top_performers_slide(dps_top, hps_top):
+def create_top_performers_slide(dps_top, hps_top, difficulty='Heroic'):
     """Create slide with top DPS and HPS performers."""
     dps_rows = ""
     for i, player in enumerate(dps_top[:5], 1):
@@ -279,7 +279,7 @@ def create_top_performers_slide(dps_top, hps_top):
         {logo_html}
     </div>
     <div style="width: 920px; margin: 0 20px; padding-top: 20px;" class="fit">
-        <h1 class="text-5xl text-primary" style="margin: 0; font-weight: bold;">PUMPERS OF THE WEEK</h1>
+        <h1 class="text-5xl text-primary" style="margin: 0; font-weight: bold;">PUMPERS OF THE WEEK <span class="text-3xl text-secondary">- {difficulty.upper()}</span></h1>
     </div>
     
     <div class="row fill-height" style="margin: 0 32px; gap: 20px; align-items: stretch;">
@@ -341,15 +341,14 @@ def create_closing_slide():
     with open(os.path.join(config.SLIDES_DIR, 'slide7.html'), 'w') as f:
         f.write(html)
 
-def create_top_dps_overall_slide(week_start, week_end):
+def create_top_dps_overall_slide(week_start, week_end, difficulty='Heroic'):
     """Create slide with top 5 DPS overall across all fights."""
-    # Get overall DPS rankings
     logo_html = get_logo_html()
     conn = database.sqlite3.connect(config.DATABASE_PATH)
     cursor = conn.cursor()
-    
+
     cursor.execute('''
-        SELECT 
+        SELECT
             player_name,
             player_class,
             spec,
@@ -362,10 +361,11 @@ def create_top_dps_overall_slide(week_start, week_end):
         AND dps IS NOT NULL
         AND dps > 0
         AND role = 'DPS'
+        AND p.difficulty = ?
         GROUP BY player_name
         ORDER BY avg_dps DESC
         LIMIT 5
-    ''', (week_start, week_end))
+    ''', (week_start, week_end, difficulty))
     
     top_dps = cursor.fetchall()
     conn.close()
@@ -401,7 +401,7 @@ def create_top_dps_overall_slide(week_start, week_end):
         {logo_html}
     </div>
     <div style="width: 920px; margin: 0 20px; padding-top: 20px;" class="fit">
-        <h1 class="text-5xl text-primary" style="margin: 0; font-weight: bold;">TOP 5 DPS - OVERALL</h1>
+        <h1 class="text-5xl text-primary" style="margin: 0; font-weight: bold;">TOP 5 DPS <span class="text-3xl text-secondary">- {difficulty.upper()}</span></h1>
     </div>
     
     <div style="margin: 0 32px;">
@@ -717,8 +717,9 @@ def generate_presentation():
     summary = database.get_weekly_summary(week_start, week_end)
     boss_stats = database.get_boss_statistics(week_start, week_end)
     boss_mvps = database.get_boss_mvps(week_start, week_end)
-    dps_top = database.get_top_performers(week_start, week_end, 'dps', 5)
-    hps_top = database.get_top_performers(week_start, week_end, 'hps', 5)
+    difficulty = 'Heroic'
+    dps_top = database.get_top_performers(week_start, week_end, 'dps', 5, difficulty)
+    hps_top = database.get_top_performers(week_start, week_end, 'hps', 5, difficulty)
     
     print(f"Summary: {summary}")
     print(f"Boss stats: {len(boss_stats)} bosses")
@@ -735,8 +736,8 @@ def generate_presentation():
     create_title_slide(week_start, week_end)
     create_summary_slide(summary)
     create_boss_breakdown_slide(boss_stats)
-    create_top_performers_slide(dps_top, hps_top)
-    create_top_dps_overall_slide(week_start, week_end)
+    create_top_performers_slide(dps_top, hps_top, difficulty)
+    create_top_dps_overall_slide(week_start, week_end, difficulty)
     create_boss_mvp_slide(boss_mvps)
     create_death_causes_slide(week_start, week_end)
 

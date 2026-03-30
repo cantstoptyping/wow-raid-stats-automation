@@ -212,15 +212,15 @@ def get_weekly_summary(week_start, week_end):
         'total_raid_time_hours': total_time_ms / (1000 * 60 * 60) if total_time_ms else 0
     }
 
-def get_top_performers(week_start, week_end, metric='dps', limit=5):
-    """Get top performers for a given metric."""
+def get_top_performers(week_start, week_end, metric='dps', limit=5, difficulty='Heroic'):
+    """Get top performers for a given metric, filtered by difficulty."""
     conn = sqlite3.connect(config.DATABASE_PATH)
     cursor = conn.cursor()
-    
+
     order_column = metric if metric in ['dps', 'hps', 'parse_percentile'] else 'dps'
-    
+
     cursor.execute(f'''
-        SELECT 
+        SELECT
             player_name,
             player_class,
             role,
@@ -230,10 +230,11 @@ def get_top_performers(week_start, week_end, metric='dps', limit=5):
         JOIN raids r ON p.raid_id = r.raid_id
         WHERE r.start_time >= ? AND r.start_time <= ?
         AND {order_column} IS NOT NULL
+        AND p.difficulty = ?
         GROUP BY player_name, player_class, role
         ORDER BY avg_performance DESC
         LIMIT ?
-    ''', (week_start, week_end, limit))
+    ''', (week_start, week_end, difficulty, limit))
     
     results = cursor.fetchall()
     conn.close()

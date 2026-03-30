@@ -289,6 +289,28 @@ def fetch_weekly_data():
             # MOVED INSIDE THE FIGHT LOOP - NOTICE THE INDENTATION
             fight_details = api.get_fight_details(report['code'], fight['id'])
 
+            # Parse DPS and healing only on kills — wipes skew averages and players complained lol
+            if not fight.get('kill'):
+                # Still parse deaths from wipes
+                death_events = fight_details.get('deaths', {}).get('data', [])
+                if death_events:
+                    for death in death_events:
+                        target_id = death.get('targetID', -1)
+                        ability_id = death.get('killingAbilityGameID', 0)
+                        player_name = actor_map.get(target_id, f'Unknown (ID: {target_id})')
+                        ability_name = ability_map.get(ability_id) or ('Environmental / Unknown' if ability_id == 0 else f'Unknown (ID: {ability_id})')
+                        parsed_data['deaths'].append({
+                            'raid_id': report['code'],
+                            'fight_id': fight['id'],
+                            'boss_name': boss_name,
+                            'difficulty': difficulty,
+                            'player_name': player_name,
+                            'ability_name': ability_name,
+                            'ability_id': ability_id,
+                            'timestamp': death.get('timestamp', 0)
+                        })
+                continue
+
             # Parse DPS data
             dps_table = fight_details.get('table', {})
             if dps_table and isinstance(dps_table, dict) and 'data' in dps_table:
