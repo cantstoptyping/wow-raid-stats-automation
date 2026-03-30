@@ -47,13 +47,14 @@ def init_database():
             raid_id TEXT NOT NULL,
             encounter_id INTEGER,
             boss_name TEXT,
+            difficulty TEXT,
             player_name TEXT NOT NULL,
             player_class TEXT,
             spec TEXT,
             role TEXT,
             dps REAL,
             hps REAL,
-            parse_percentile INTEGER,
+            parse_percentile REAL,
             deaths INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (raid_id) REFERENCES raids(raid_id),
@@ -151,13 +152,14 @@ def store_player_performance(performance_data):
     cursor = conn.cursor()
     
     cursor.execute('''
-        INSERT INTO player_performance 
-        (raid_id, encounter_id, boss_name, player_name, player_class, spec, role, dps, hps, parse_percentile, deaths)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO player_performance
+        (raid_id, encounter_id, boss_name, difficulty, player_name, player_class, spec, role, dps, hps, parse_percentile, deaths)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         performance_data['raid_id'],
         performance_data.get('encounter_id'),
         performance_data.get('boss_name'),
+        performance_data.get('difficulty'),
         performance_data['player_name'],
         performance_data.get('player_class'),
         performance_data.get('spec'),
