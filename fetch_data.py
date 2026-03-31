@@ -246,9 +246,8 @@ def fetch_weekly_data():
             'end_time': report['endTime'],
             'zone_name': report.get('zone', {}).get('name') if report.get('zone') else None,
         }
-        
-        parsed_data['raids'].append(raid_data)
-        
+
+        report_has_valid_fights = False
         for fight in report.get('fights', []):
             boss_name = fight['name']
             
@@ -269,6 +268,7 @@ def fetch_weekly_data():
                     print(f"  Skipping {boss_name} (difficulty {fight_difficulty}, want {config.DIFFICULTY_FILTER})")
                     continue
             
+            report_has_valid_fights = True
             difficulty = DIFFICULTY_MAP.get(fight.get('difficulty'), 'Unknown')
             print(f"  Processing fight: {boss_name} ({difficulty})")
 
@@ -405,7 +405,12 @@ def fetch_weekly_data():
                         'ability_id': ability_id,
                         'timestamp': death.get('timestamp', 0)
                     })
-    
+
+        if report_has_valid_fights:
+            parsed_data['raids'].append(raid_data)
+        else:
+            print(f"  Skipping report {report['code']} - no valid raid fights found (likely M+ or wrong zone)")
+
     return parsed_data
 
 if __name__ == '__main__':
