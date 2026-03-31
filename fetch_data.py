@@ -335,6 +335,8 @@ def fetch_weekly_data():
                     if entry.get('type') in ('NPC', 'Boss'):  # skip non-players - can add 'Pet' to exclde pets if its breaking it
                         continue
                     player_name = entry.get('name', 'Unknown')
+                    if player_name not in dps_rank_lookup:  # skip healers/tanks ranked separately
+                        continue
                     player_class = entry.get('type', 'Unknown')
                     spec = entry.get('icon', '').split('-')[-1] if entry.get('icon') else 'Unknown'
                     total_damage = entry.get('total', 0)
@@ -363,6 +365,8 @@ def fetch_weekly_data():
                     if entry.get('type') in ('NPC', 'Boss'):  # skip non-players
                         continue
                     player_name = entry.get('name', 'Unknown')
+                    if player_name not in heal_rank_lookup:  # skip DPS/tanks who incidentally healed
+                        continue
                     player_class = entry.get('type', 'Unknown')
                     spec = entry.get('icon', '').split('-')[-1] if entry.get('icon') else 'Unknown'
                     total_healing = entry.get('total', 0)
