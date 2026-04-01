@@ -96,6 +96,16 @@ def init_database():
 
 
 
+    # Migrations if needed - shouldnt if it's autocreating, but if I persist the db in the future it might need it
+    migrations = [
+        "ALTER TABLE encounters ADD COLUMN difficulty TEXT",
+    ]
+    for migration in migrations:
+        try:
+            cursor.execute(migration)
+        except sqlite3.OperationalError:
+            pass  # column already exists
+
     conn.commit()
     conn.close()
 
@@ -178,13 +188,20 @@ def get_weekly_summary(week_start, week_end):
     conn = sqlite3.connect(config.DATABASE_PATH)
     cursor = conn.cursor()
     
-    # Get raids in date range
+    # Get raids in date range, using first pull start to last pull end for accurate raid time
     cursor.execute('''
-        SELECT COUNT(*), SUM(end_time - start_time) as total_time
-        FROM raids
-        WHERE start_time >= ? AND start_time <= ?
+        SELECT COUNT(DISTINCT r.raid_id),
+               SUM(e.raid_span_ms) as total_time
+        FROM raids r
+        LEFT JOIN (
+            SELECT raid_id,
+                   MAX(kill_time) - MIN(kill_time - kill_duration_ms) as raid_span_ms
+            FROM encounters
+            GROUP BY raid_id
+        ) e ON e.raid_id = r.raid_id
+        WHERE r.start_time >= ? AND r.start_time <= ?
     ''', (week_start, week_end))
-    
+
     raid_stats = cursor.fetchone()
     total_raids = raid_stats[0] or 0
     total_time_ms = raid_stats[1] or 0
