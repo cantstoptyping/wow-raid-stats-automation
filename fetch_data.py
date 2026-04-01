@@ -151,7 +151,7 @@ class WarcraftLogsAPI:
         print(f"got {len(reports)} reports from WCL, owner list: {[r.get('owner', {}).get('name') for r in reports]}")
 
 
-        return filtered_reports if filtered_reports else reports[:10]
+        return filtered_reports
     
     def get_actor_mappings(self, report_code):
         """Get actor ID to name mappings for the report."""
