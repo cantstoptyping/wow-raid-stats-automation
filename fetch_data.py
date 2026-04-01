@@ -223,7 +223,7 @@ def fetch_weekly_data():
     api = WarcraftLogsAPI()
 
     today = datetime.now()
-    days_back = (today.weekday() - 2) % 7 or 7  # anchor to last Wednesday; if today is Wed, go back a full week
+    days_back = (today.weekday() - 2) % 7  # days since last Wednesday (0 = today is Wednesday)
     reports = api.get_guild_reports(days_back=days_back)
     
     parsed_data = {
