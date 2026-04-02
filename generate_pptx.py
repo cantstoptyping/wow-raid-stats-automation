@@ -32,9 +32,12 @@ def get_logo_html():
     return ''
 
 def get_week_range():
-    """Get timestamps covering the last 7 days."""
+    """Get timestamps from midnight of the most recent past Wednesday to now.
+    If today is Wednesday, uses last Wednesday so the full raid week is included.
+    """
     today = datetime.now()
-    week_start = (today - timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
+    days_back = (today.weekday() - 2) % 7 or 7  # 2 = Wednesday
+    week_start = (today - timedelta(days=days_back)).replace(hour=0, minute=0, second=0, microsecond=0)
 
     return int(week_start.timestamp() * 1000), int(today.timestamp() * 1000)
 

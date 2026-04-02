@@ -137,9 +137,11 @@ class WarcraftLogsAPI:
                 or desired in r.get('title', '').lower()
             ]
 
-        # Filter to requested time range
-        end_time = int(datetime.now().timestamp() * 1000)
-        start_time = int((datetime.now() - timedelta(days=days_back)).timestamp() * 1000)
+        # Filter to requested time range — anchor start to midnight of last Wednesday
+        now = datetime.now()
+        end_time = int(now.timestamp() * 1000)
+        week_start = (now - timedelta(days=days_back)).replace(hour=0, minute=0, second=0, microsecond=0)
+        start_time = int(week_start.timestamp() * 1000)
         
         filtered_reports = [
             r for r in reports 
@@ -224,7 +226,7 @@ def fetch_weekly_data():
     api = WarcraftLogsAPI()
 
     today = datetime.now()
-    days_back = (today.weekday() - 2) % 7  # days since last Wednesday (0 = today is Wednesday)
+    days_back = (today.weekday() - 2) % 7 or 7  # anchor to last Wednesday; if today is Wed, go back a full week
     reports = api.get_guild_reports(days_back=days_back)
     
     parsed_data = {
