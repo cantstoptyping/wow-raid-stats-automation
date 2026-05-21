@@ -1,0 +1,26 @@
+
+:root {
+  /* WoW-inspired color palette - Horde red and gold theme */
+  --color-primary: #32CD32;  /* Deep red */
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #D4AF37;  /* Gold */
+  --color-secondary-foreground: #1d1d1d;
+  --color-accent: #2C1810;  /* Dark brown */
+  --color-accent-foreground: #ffffff;
+  --color-surface: #1a1a1a;  /* Dark background */
+  --color-surface-foreground: #f5f5f5;
+  --color-muted: #2d2d2d;
+  --color-muted-foreground: #a0a0a0;
+  --color-border: #404040;
+  
+  /* Typography - Bold and impactful */
+  --font-family-display: 'Arial Black', Arial, sans-serif;
+  --font-weight-display: 900;
+  --font-family-content: Arial, sans-serif;
+  --font-weight-content: 400;
+  --font-size-content: 14px;
+  
+  /* Spacing */
+  --gap: 12px;
+  --radius: 4px;
+}
