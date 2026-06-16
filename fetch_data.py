@@ -1,4 +1,5 @@
 import requests
+import time
 from datetime import datetime, timedelta
 import config
 
@@ -9,97 +10,121 @@ DIFFICULTY_MAP = {
     14: 'LFR'
 }
 
-# boss filter - only these bosses will be included - difficulty filter has been added to env. update in yml as well for midnight
-BOSS_FILTER = [
-    "Imperator Averzian",
-    "Vorasius",
-    "Fallen-King Salhadaar",
-    "Vaelgor & Ezzorak",
-    "Lightblinded Vanguard",
-    "Crown of the Cosmos",
-    "Chimaerus, the Undreamt God",
-    "Belo'ren, Child of Al'ar",
-    "Midnight Falls"
+# Maps a unique keyword (lowercase, checked with `in`) to the canonical display name.
+# Any WCL boss name containing the keyword is normalised to the canonical form.
+# Using partial keywords handles WCL's inconsistent naming across patches/difficulties.
+BOSS_FILTER = {
+    "averzian":      "Imperator Averzian",
+    "vorasius":      "Vorasius",
+    "salhadaar":     "Fallen-King Salhadaar",
+    "vaelgor":       "Vaelgor & Ezzorak",
+    "ezzorak":       "Vaelgor & Ezzorak",
+    "lightblinded":  "Lightblinded Vanguard",
+    "cosmos":        "Crown of the Cosmos",
+    "chimaerus":     "Chimaerus, the Undreamt God",
+    "belo'ren":      "Belo'ren, Child of Al'ar",
+    "midnight falls":"Midnight Falls",
+}
+
+# Common targeted external defensive ability IDs (stable across expansions).
+# Update this list if new externals are added in a patch.
+EXTERNAL_DEFENSIVE_IDS = [
+    33206,   # Pain Suppression (Disc Priest)
+    102342,  # Ironbark (Druid)
+    116849,  # Life Cocoon (Mistweaver Monk)
+    6940,    # Blessing of Sacrifice (Paladin)
+    1022,    # Blessing of Protection (Paladin)
+    633,     # Lay on Hands (Paladin)
+    97462,   # Rallying Cry (Warrior)
+    31821,   # Aura Mastery (Holy Paladin)
+    196718,  # Darkness (Havoc DH)
+    145629,  # Anti-Magic Zone (DK)
 ]
+
+_EXTERNAL_FILTER = (
+    "ability.id in ("
+    + ",".join(str(i) for i in EXTERNAL_DEFENSIVE_IDS)
+    + ")"
+)
+
 
 class WarcraftLogsAPI:
     """WarcraftLogs API client."""
-    
+
     def __init__(self):
         self.client_id = config.WARCRAFTLOGS_CLIENT_ID
         self.client_secret = config.WARCRAFTLOGS_CLIENT_SECRET
         self.token = None
         self.token_expires = None
-    
+
     def _get_access_token(self):
         """Get OAuth2 access token."""
         if self.token and self.token_expires and datetime.now() < self.token_expires:
             return self.token
-        
-        auth_url = 'https://www.warcraftlogs.com/oauth/token'
-        
+
         response = requests.post(
-            auth_url,
+            'https://www.warcraftlogs.com/oauth/token',
             auth=(self.client_id, self.client_secret),
             data={'grant_type': 'client_credentials'}
         )
-        
+
         if response.status_code != 200:
             raise Exception(f"Failed to get access token: {response.text}")
-        
+
         data = response.json()
         self.token = data['access_token']
         self.token_expires = datetime.now() + timedelta(seconds=data['expires_in'] - 60)
-        
         return self.token
-    
-    def _graphql_query(self, query, variables=None):
-        """Execute a GraphQL query against WarcraftLogs API."""
+
+    def _graphql_query(self, query, variables=None, _retry=3):
+        """Execute a GraphQL query against WarcraftLogs API. Retries on 429."""
         token = self._get_access_token()
-        
-        headers = {
-            'Authorization': f'Bearer {token}',
-            'Content-Type': 'application/json',
-        }
-        
+
         response = requests.post(
             config.WARCRAFTLOGS_API_URL,
-            headers=headers,
+            headers={
+                'Authorization': f'Bearer {token}',
+                'Content-Type': 'application/json',
+            },
             json={'query': query, 'variables': variables or {}}
         )
-        
+
+        if response.status_code == 429 and _retry > 0:
+            wait = 300  # WCL free-tier resets hourly; wait 5 min between retries
+            print(f"  Rate limited — waiting {wait}s before retry ({_retry} retries left)...")
+            time.sleep(wait)
+            return self._graphql_query(query, variables, _retry=_retry - 1)
+
         if response.status_code != 200:
             raise Exception(f"GraphQL query failed: {response.text}")
-        
+
         data = response.json()
         if 'errors' in data:
             raise Exception(f"GraphQL errors: {data['errors']}")
-        
+
         return data['data']
-    
-    def get_guild_reports(self, days_back=7):
-        """Get recent guild raid reports."""
-        
+
+    def get_guild_reports(self):
+        """Get all guild raid reports for the season, paginated."""
         query = """
-        query($guildName: String!, $serverSlug: String!, $serverRegion: String!) {
+        query($guildName: String!, $serverSlug: String!, $serverRegion: String!, $page: Int) {
           reportData {
             reports(
               guildName: $guildName
               guildServerSlug: $serverSlug
               guildServerRegion: $serverRegion
-              limit: 50
+              limit: 25
+              page: $page
             ) {
+              current_page
+              last_page
               data {
                 code
                 title
-                owner {
-                  name
-                }
+                owner { name }
                 startTime
                 endTime
-                zone {
-                  name
-                }
+                zone { name }
                 fights {
                   id
                   name
@@ -114,137 +139,140 @@ class WarcraftLogsAPI:
           }
         }
         """
-        
-        variables = {
-            'guildName': config.GUILD_NAME,
-            'serverSlug': config.GUILD_REALM.lower().replace(' ', '-'),
-            'serverRegion': config.GUILD_REGION.upper()
-        }
-        
-        result = self._graphql_query(query, variables)
-        
-        reports = result.get('reportData', {}).get('reports', {}).get('data', [])
-        
-        if hasattr(config, 'RAID_TEAM_FILTER') and config.RAID_TEAM_FILTER:
-            reports = [r for r in reports if r.get('owner', {}).get('name', '').lower() == config.RAID_TEAM_FILTER.lower()]
-            print(f"Filtered to {len(reports)} reports by owner '{config.RAID_TEAM_FILTER}'")
-        
+
+        all_reports = []
+        page = 1
+        while True:
+            variables = {
+                'guildName': config.GUILD_NAME,
+                'serverSlug': config.GUILD_REALM.lower().replace(' ', '-'),
+                'serverRegion': config.GUILD_REGION.upper(),
+                'page': page
+            }
+            result = self._graphql_query(query, variables)
+            reports_data = result.get('reportData', {}).get('reports', {})
+            reports = reports_data.get('data', [])
+            current_page = reports_data.get('current_page', 1)
+            last_page = reports_data.get('last_page', 1)
+
+            all_reports.extend(reports)
+            print(f"  Fetched report page {current_page}/{last_page} ({len(reports)} reports)")
+
+            if current_page >= last_page:
+                break
+            page += 1
+
+        # Filter by raid team owner/title
         if config.RAID_TEAM_FILTER:
             desired = config.RAID_TEAM_FILTER.lower()
-            reports = [
-            r for r in reports
-            if desired in r.get('owner', {}).get('name', '').lower()
-                or desired in r.get('title', '').lower()
+            all_reports = [
+                r for r in all_reports
+                if desired in r.get('owner', {}).get('name', '').lower()
+                   or desired in r.get('title', '').lower()
             ]
 
-        # Filter to requested time range — anchor start to midnight of last Wednesday
-        now = datetime.now()
-        end_time = int(now.timestamp() * 1000)
-        week_start = (now - timedelta(days=days_back)).replace(hour=0, minute=0, second=0, microsecond=0)
-        start_time = int(week_start.timestamp() * 1000)
-        
-        filtered_reports = [
-            r for r in reports 
-            if start_time <= r['startTime'] <= end_time
-        ]
-        
-        print(f"Found {len(reports)} total reports, {len(filtered_reports)} in last {days_back} days")
-        
-        print(f"got {len(reports)} reports from WCL, owner list: {[r.get('owner', {}).get('name') for r in reports]}")
+        # Filter to on/after season start
+        if config.SEASON_START:
+            all_reports = [r for r in all_reports if r['startTime'] >= config.SEASON_START]
 
+        print(f"Found {len(all_reports)} reports after filtering")
+        return all_reports
 
-        return filtered_reports
-    
     def get_actor_mappings(self, report_code):
-        """Get actor ID to name mappings for the report."""
+        """Get actor ID to name mappings and the set of player actor IDs."""
         query = """
         query($code: String!) {
           reportData {
             report(code: $code) {
               masterData {
-                actors {
-                  id
-                  name
-                  type
-                  subType
-                }
-                abilities {
-                  gameID
-                  name
-                }
+                actors { id  name  type  subType }
+                abilities { gameID  name }
               }
             }
           }
         }
         """
-        
         try:
             result = self._graphql_query(query, {'code': report_code})
             master_data = result.get('reportData', {}).get('report', {}).get('masterData', {})
-            
-            # Create mappings
-            actor_map = {actor['id']: actor['name'] for actor in master_data.get('actors', [])}
+            actors = master_data.get('actors', [])
+            actor_map = {a['id']: a['name'] for a in actors}
+            player_ids = {a['id'] for a in actors if a.get('type') == 'Player'}
             ability_map = {ability['gameID']: ability['name'] for ability in master_data.get('abilities', [])}
-            
-            return actor_map, ability_map
+            return actor_map, ability_map, player_ids
         except Exception as e:
             print(f"  Warning: Could not fetch actor mappings: {e}")
-            return {}, {}
-    
+            return {}, {}, set()
+
     def get_fight_details(self, report_code, fight_id):
-        """Get detailed fight information including DPS, HPS, and deaths."""
+        """Get fight details: DPS, HPS, damage taken, deaths, and external defensives."""
         query = """
-        query($code: String!, $fightIDs: [Int]!) {
+        query($code: String!, $fightIDs: [Int]!, $externalFilter: String!) {
           reportData {
             report(code: $code) {
               table(fightIDs: $fightIDs, dataType: DamageDone)
               healingTable: table(fightIDs: $fightIDs, dataType: Healing)
+              damageTakenTable: table(fightIDs: $fightIDs, dataType: DamageTaken)
               rankings(fightIDs: $fightIDs)
               deaths: events(fightIDs: $fightIDs, dataType: Deaths, limit: 1000) {
+                data
+              }
+              externals: events(
+                fightIDs: $fightIDs
+                dataType: Buffs
+                filterExpression: $externalFilter
+                limit: 1000
+              ) {
                 data
               }
             }
           }
         }
         """
-        
-        variables = {
-            'code': report_code,
-            'fightIDs': [fight_id]
-        }
-        
         try:
-            result = self._graphql_query(query, variables)
+            result = self._graphql_query(query, {
+                'code': report_code,
+                'fightIDs': [fight_id],
+                'externalFilter': _EXTERNAL_FILTER,
+            })
             return result.get('reportData', {}).get('report', {})
         except Exception as e:
             print(f"  Warning: Could not fetch details for fight {fight_id}: {e}")
             return {}
 
 
-def fetch_weekly_data():
-    """Fetch and parse weekly raid data with detailed performance metrics."""
-    api = WarcraftLogsAPI()
+def fetch_season_data(skip_raid_ids=None):
+    """Fetch and parse all season raid data.
 
-    today = datetime.now()
-    days_back = (today.weekday() - 2) % 7 or 7  # anchor to last Wednesday; if today is Wed, go back a full week
-    reports = api.get_guild_reports(days_back=days_back)
-    
+    skip_raid_ids: set of report codes already stored in the DB — their fight
+    details are skipped to avoid redundant API calls.
+    """
+    api = WarcraftLogsAPI()
+    skip_raid_ids = skip_raid_ids or set()
+
+    reports = api.get_guild_reports()
+
     parsed_data = {
         'raids': [],
         'encounters': [],
         'players': [],
-        'deaths': []
+        'deaths': [],
+        'externals': [],
     }
-    
+
     for report in reports:
-        print(f"\nProcessing report: {report['title']}")
-        
-        # Get actor and ability mappings for this report
+        report_code = report['code']
+        print(f"\nProcessing report: {report['title']} ({report_code})")
+
+        if report_code in skip_raid_ids:
+            print(f"  Already stored — skipping detail fetch")
+            continue
+
         print("  Fetching actor/ability mappings...")
-        actor_map, ability_map = api.get_actor_mappings(report['code'])
-        
+        actor_map, ability_map, player_ids = api.get_actor_mappings(report_code)
+
         raid_data = {
-            'raid_id': report['code'],
+            'raid_id': report_code,
             'raid_name': report['title'],
             'start_time': report['startTime'],
             'end_time': report['endTime'],
@@ -252,178 +280,195 @@ def fetch_weekly_data():
         }
 
         report_has_valid_fights = False
+
         for fight in report.get('fights', []):
             boss_name = fight['name']
-            
-            # Skip trash and non-boss fights
+
             if boss_name == 'Trash':
                 continue
-            
-            # Filter by boss list if configured
-            if BOSS_FILTER and boss_name not in BOSS_FILTER:
+
+            boss_lower = boss_name.lower()
+            canonical_name = next(
+                (name for kw, name in BOSS_FILTER.items() if kw in boss_lower),
+                None
+            )
+            if canonical_name is None:
                 print(f"  Skipping {boss_name} (not in boss filter)")
                 continue
-            
-            # Commenting out difficulty filter for now - can be re-enabled if needed, but many fights don't have difficulty set properly in WCL data
-            # Filter by difficulty if configured
+
             if config.DIFFICULTY_FILTER is not None:
                 fight_difficulty = fight.get('difficulty', 0)
                 if fight_difficulty != config.DIFFICULTY_FILTER:
                     print(f"  Skipping {boss_name} (difficulty {fight_difficulty}, want {config.DIFFICULTY_FILTER})")
                     continue
-            
+
             report_has_valid_fights = True
             difficulty = DIFFICULTY_MAP.get(fight.get('difficulty'), 'Unknown')
-            print(f"  Processing fight: {boss_name} ({difficulty})")
+            boss_name = canonical_name  # normalize to canonical form for storage
+            is_kill = fight.get('kill', False)
+            print(f"  Processing fight: {boss_name} ({difficulty}) {'[KILL]' if is_kill else '[WIPE]'}")
 
             encounter_data = {
-                'raid_id': report['code'],
+                'raid_id': report_code,
                 'fight_id': fight['id'],
                 'boss_name': boss_name,
                 'difficulty': difficulty,
-                'is_kill': fight.get('kill', False),
+                'is_kill': is_kill,
                 'kill_time': fight.get('endTime'),
                 'kill_duration_ms': fight.get('endTime', 0) - fight.get('startTime', 0),
-                'wipe_count': 0 if fight.get('kill') else 1
+                'wipe_count': 0 if is_kill else 1,
             }
-            
             parsed_data['encounters'].append(encounter_data)
-                      
-            fight_details = api.get_fight_details(report['code'], fight['id'])
 
-            # Parse DPS and healing only on kills — wipes skew averages and players complained lol
-            if not fight.get('kill'):
-                # Still parse deaths from wipes
-                death_events = fight_details.get('deaths', {}).get('data', [])
-                if death_events:
-                    for death in death_events:
-                        target_id = death.get('targetID', -1)
-                        ability_id = death.get('killingAbilityGameID', 0)
-                        player_name = actor_map.get(target_id, f'Unknown (ID: {target_id})')
-                        ability_name = ability_map.get(ability_id) or ('Environmental / Unknown' if ability_id == 0 else f'Unknown (ID: {ability_id})')
-                        parsed_data['deaths'].append({
-                            'raid_id': report['code'],
-                            'fight_id': fight['id'],
-                            'boss_name': boss_name,
-                            'difficulty': difficulty,
-                            'player_name': player_name,
-                            'ability_name': ability_name,
-                            'ability_id': ability_id,
-                            'timestamp': death.get('timestamp', 0)
-                        })
+            time.sleep(1)  # throttle to stay within WCL free-tier rate limit
+            fight_details = api.get_fight_details(report_code, fight['id'])
+            fight_duration = max((fight['endTime'] - fight['startTime']) / 1000, 1)
+
+            # --- Deaths (always captured, kills and wipes) ---
+            for death in fight_details.get('deaths', {}).get('data', []):
+                target_id = death.get('targetID', -1)
+                ability_id = death.get('killingAbilityGameID', 0)
+                player_name = actor_map.get(target_id, f'Unknown (ID: {target_id})')
+                ability_name = ability_map.get(ability_id) or (
+                    'Environmental / Unknown' if ability_id == 0 else f'Unknown (ID: {ability_id})'
+                )
+                parsed_data['deaths'].append({
+                    'raid_id': report_code,
+                    'fight_id': fight['id'],
+                    'boss_name': boss_name,
+                    'difficulty': difficulty,
+                    'player_name': player_name,
+                    'ability_name': ability_name,
+                    'ability_id': ability_id,
+                    'timestamp': death.get('timestamp', 0),
+                })
+
+            # --- External defensives (always captured) ---
+            for event in fight_details.get('externals', {}).get('data', []):
+                if event.get('type') not in ('applybuff', 'refreshbuff'):
+                    continue
+                source_id = event.get('sourceID', -1)
+                target_id = event.get('targetID', -1)
+                if source_id == target_id:
+                    continue  # self-buff, not an external
+                if source_id not in player_ids:
+                    continue  # ignore NPC/environment sources
+                ability_id = event.get('abilityGameID', 0)
+                parsed_data['externals'].append({
+                    'raid_id': report_code,
+                    'fight_id': fight['id'],
+                    'boss_name': boss_name,
+                    'difficulty': difficulty,
+                    'caster_name': actor_map.get(source_id, f'Unknown (ID: {source_id})'),
+                    'target_name': actor_map.get(target_id, f'Unknown (ID: {target_id})'),
+                    'ability_id': ability_id,
+                    'ability_name': ability_map.get(ability_id, f'Unknown (ID: {ability_id})'),
+                    'timestamp': event.get('timestamp', 0),
+                })
+
+            # Skip DPS/HPS/damage-taken stats on wipes — skews averages
+            if not is_kill:
                 continue
 
-            # Build role-specific name → rankPercent lookups from the rankings endpoint
+            # --- Build rank percentile lookups ---
             dps_rank_lookup = {}
             heal_rank_lookup = {}
-            rankings_raw = fight_details.get('rankings', {})
-            for fight_rankings in rankings_raw.get('data', []):
-                roles = fight_rankings.get('roles', {})
-                for role_key, role_data in roles.items():
+            for fight_rankings in fight_details.get('rankings', {}).get('data', []):
+                for role_key, role_data in fight_rankings.get('roles', {}).items():
                     for char in role_data.get('characters', []):
                         name = char.get('name')
                         pct = char.get('rankPercent')
                         if name and pct is not None:
                             if role_key == 'healers':
                                 heal_rank_lookup[name] = pct
-                            else:  # dps and tanks
+                            else:
                                 dps_rank_lookup[name] = pct
 
-            # Parse DPS data
+            # --- DPS ---
             dps_table = fight_details.get('table', {})
             if dps_table and isinstance(dps_table, dict) and 'data' in dps_table:
-                entries = dps_table.get('data', {}).get('entries', [])
-                fight_duration = max((fight['endTime'] - fight['startTime']) / 1000, 1)
-
-                for entry in entries:
-                    if entry.get('type') in ('NPC', 'Boss'):  # skip non-players - can add 'Pet' to exclde pets if its breaking it
+                for entry in dps_table.get('data', {}).get('entries', []):
+                    if entry.get('type') in ('NPC', 'Boss'):
                         continue
                     player_name = entry.get('name', 'Unknown')
-                    if player_name not in dps_rank_lookup:  # skip healers/tanks ranked separately
+                    if player_name not in dps_rank_lookup:
                         continue
-                    player_class = entry.get('type', 'Unknown')
-                    spec = entry.get('icon', '').split('-')[-1] if entry.get('icon') else 'Unknown'
                     total_damage = entry.get('total', 0)
-
                     parsed_data['players'].append({
-                        'raid_id': report['code'],
+                        'raid_id': report_code,
                         'fight_id': fight['id'],
                         'boss_name': boss_name,
                         'difficulty': difficulty,
                         'player_name': player_name,
-                        'player_class': player_class,
-                        'spec': spec,
+                        'player_class': entry.get('type', 'Unknown'),
+                        'spec': entry.get('icon', '').split('-')[-1] if entry.get('icon') else 'Unknown',
                         'role': 'DPS',
                         'dps': total_damage / fight_duration,
                         'total_damage': total_damage,
-                        'percentile': dps_rank_lookup.get(player_name)
+                        'percentile': dps_rank_lookup.get(player_name),
                     })
 
-            # Parse healing data
+            # --- HPS ---
             heal_table = fight_details.get('healingTable', {})
             if heal_table and isinstance(heal_table, dict) and 'data' in heal_table:
-                entries = heal_table.get('data', {}).get('entries', [])
-                fight_duration = max((fight['endTime'] - fight['startTime']) / 1000, 1)
-                
-                for entry in entries:
-                    if entry.get('type') in ('NPC', 'Boss'):  # skip non-players
+                for entry in heal_table.get('data', {}).get('entries', []):
+                    if entry.get('type') in ('NPC', 'Boss'):
                         continue
                     player_name = entry.get('name', 'Unknown')
-                    if player_name not in heal_rank_lookup:  # skip DPS/tanks who incidentally healed
+                    if player_name not in heal_rank_lookup:
                         continue
-                    player_class = entry.get('type', 'Unknown')
-                    spec = entry.get('icon', '').split('-')[-1] if entry.get('icon') else 'Unknown'
                     total_healing = entry.get('total', 0)
-
                     parsed_data['players'].append({
-                        'raid_id': report['code'],
+                        'raid_id': report_code,
                         'fight_id': fight['id'],
                         'boss_name': boss_name,
                         'difficulty': difficulty,
                         'player_name': player_name,
-                        'player_class': player_class,
-                        'spec': spec,
+                        'player_class': entry.get('type', 'Unknown'),
+                        'spec': entry.get('icon', '').split('-')[-1] if entry.get('icon') else 'Unknown',
                         'role': 'Healer',
                         'hps': total_healing / fight_duration,
                         'total_healing': total_healing,
-                        'percentile': heal_rank_lookup.get(player_name)
+                        'percentile': heal_rank_lookup.get(player_name),
                     })
 
-            # Parse death data with proper name mapping
-            death_events = fight_details.get('deaths', {}).get('data', [])
-            if death_events:
-                for death in death_events:
-                    target_id = death.get('targetID', -1)
-                    ability_id = death.get('killingAbilityGameID', 0)
-                    
-                    player_name = actor_map.get(target_id, f'Unknown (ID: {target_id})')
-                    ability_name = ability_map.get(ability_id) or ('Environmental / Unknown' if ability_id == 0 else f'Unknown (ID: {ability_id})')
-                    
-                    parsed_data['deaths'].append({
-                        'raid_id': report['code'],
-                        'fight_id': fight['id'],
-                        'boss_name': boss_name,
-                        'difficulty': difficulty,
-                        'player_name': player_name,
-                        'ability_name': ability_name,
-                        'ability_id': ability_id,
-                        'timestamp': death.get('timestamp', 0)
-                    })
+            # --- Damage taken ---
+            dt_table = fight_details.get('damageTakenTable', {})
+            if dt_table and isinstance(dt_table, dict) and 'data' in dt_table:
+                dt_by_player = {}
+                for entry in dt_table.get('data', {}).get('entries', []):
+                    if entry.get('type') in ('NPC', 'Boss'):
+                        continue
+                    player_name = entry.get('name', 'Unknown')
+                    dt_by_player[player_name] = entry.get('total', 0)
+
+                # Attach damage_taken to matching player records added above
+                for p in parsed_data['players']:
+                    if (p['raid_id'] == report_code
+                            and p['fight_id'] == fight['id']
+                            and p['player_name'] in dt_by_player):
+                        p['total_damage_taken'] = dt_by_player[p['player_name']]
 
         if report_has_valid_fights:
             parsed_data['raids'].append(raid_data)
         else:
-            print(f"  Skipping report {report['code']} - no valid raid fights found (likely M+ or wrong zone)")
+            print(f"  Skipping report {report_code} — no valid raid fights found")
 
     return parsed_data
 
+
+# Keep old name as an alias so any external callers don't break immediately.
+fetch_weekly_data = fetch_season_data
+
+
 if __name__ == '__main__':
     config.validate_config()
-    data = fetch_weekly_data()
+    data = fetch_season_data()
     print(f"\n{'='*60}")
     print(f"SUMMARY:")
     print(f"Fetched {len(data['raids'])} raids")
     print(f"Fetched {len(data['encounters'])} encounters")
     print(f"Fetched {len(data['players'])} player records")
     print(f"Fetched {len(data['deaths'])} death events")
+    print(f"Fetched {len(data['externals'])} external defensive casts")
     print(f"{'='*60}")

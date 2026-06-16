@@ -29,13 +29,20 @@ SLIDES_DIR = 'slides'
 PRESENTATION_TITLE = f'{GUILD_NAME} Weekly Raid Stats'
 PRESENTATION_SUBTITLE = 'Performance Analysis & Top Performers'
 
-# difficulty filter to filter out any non mythic logs
+# difficulty filter — leave unset to include all difficulties
 DIFFICULTY_FILTER = os.getenv('DIFFICULTY_FILTER', None)
 if DIFFICULTY_FILTER:
     DIFFICULTY_FILTER = int(DIFFICULTY_FILTER)
 
 # Raid team filter to filter reports by owner name
 RAID_TEAM_FILTER = os.getenv('RAID_TEAM_FILTER')
+
+# Season start date (YYYY-MM-DD). Only reports on or after this date are collected.
+# Leave unset to collect all reports for the guild.
+SEASON_START = os.getenv('SEASON_START', None)
+if SEASON_START:
+    from datetime import datetime as _dt
+    SEASON_START = int(_dt.strptime(SEASON_START, '%Y-%m-%d').timestamp() * 1000)
 
 def validate_config():
     """Validate that required configuration is present."""

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python fetch_data.py)",
+      "Bash(Get-Content \"C:\\\\Users\\\\boglo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Github-wow-raid-stats-automation\\\\563a64a0-efb9-46fa-8575-0415520c35f5\\\\tasks\\\\b9tuoygzl.output\" -Wait)",
+      "Bash(Select-String -Pattern \".\")",
+      "Bash(python -c ' *)",
+      "Bash(SEASON_START=2026-03-18 python main.py)",
+      "Bash(PYTHONUTF8=1 SEASON_START=2026-03-18 python main.py)",
+      "Bash(rm -f raid_stats.db)",
+      "Bash(PYTHONUTF8=1 python main.py)"
+    ]
+  }
+}

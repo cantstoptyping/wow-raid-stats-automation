@@ -16,7 +16,15 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
-    
+
+    - name: Restore database cache
+      uses: actions/cache@v3
+      with:
+        path: raid_stats.db
+        key: raid-stats-db-${{ github.run_id }}
+        restore-keys: |
+          raid-stats-db-
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -31,15 +39,17 @@ jobs:
       run: |
         echo "WARCRAFTLOGS_CLIENT_ID=${{ secrets.WARCRAFTLOGS_CLIENT_ID }}" >> .env
         echo "WARCRAFTLOGS_CLIENT_SECRET=${{ secrets.WARCRAFTLOGS_CLIENT_SECRET }}" >> .env
-        echo "GUILD_NAME=Limeknighters" >> .env # Offlime
+        echo "GUILD_NAME=Offlime" >> .env # Offlime Limeknighters
         echo "GUILD_REALM=Frostmourne" >> .env
         echo "GUILD_REGION=us" >> .env
-        echo "RAID_TEAM_FILTER=vkf00" >> .env # Qisx
+        echo "RAID_TEAM_FILTER=Qisx" >> .env # Qisx vkf00
         echo "WARCRAFTLOGS_API_URL=https://www.warcraftlogs.com/api/v2/client" >> .env
         echo "DATABASE_PATH=raid_stats.db" >> .env
         echo "SLIDES_DIR=slides" >> .env
         echo "OUTPUT_DIR=output" >> .env  
-        echo "DIFFICULTY_FILTER=4" >> .env # Uncomment and set to filter by difficulty (e.g. 5 for Mythic)
+        # SEASON_START limits collection to reports on/after this date (YYYY-MM-DD).
+        # Leave unset to collect all reports for the guild ever.
+        echo "SEASON_START=${{ vars.SEASON_START }}" >> .env
     
     - name: Generate raid stats
       run: python main.py
@@ -70,13 +80,13 @@ jobs:
         publish_dir: ./deploy  # <-- Changed from ./
         force_orphan: true
     
-    - name: Post to Discord
-      if: success()
-      env:
-        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
-      run: |
-        TIMESTAMP=$(date +%s)
-        PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/slideshow.html?v=${TIMESTAMP}"
-        curl -H "Content-Type: application/json" \
-             -d "{\"content\": \"**New Raid Stats Posted!**\n\n View the stats: $PAGES_URL\n\nUpdated: $(date '+%Y-%m-%d %H:%M UTC')\"}" \
-             $DISCORD_WEBHOOK
+    # - name: Post to Discord
+    #   if: success()
+    #   env:
+    #     DISCORD_WEBHOOK:  # commenting out to disable webhook for now  ${{ secrets.DISCORD_WEBHOOK_URL }}
+    #   run: |
+    #     TIMESTAMP=$(date +%s)
+    #     PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/slideshow.html?v=${TIMESTAMP}"
+    #     curl -H "Content-Type: application/json" \
+    #          -d "{\"content\": \"**New Raid Stats Posted!**\n\n View the stats: $PAGES_URL\n\nUpdated: $(date '+%Y-%m-%d %H:%M UTC')\"}" \
+    #          $DISCORD_WEBHOOK

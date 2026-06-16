@@ -144,71 +144,56 @@ def main():
     database.init_database()
     print("✓ Database ready")
     
-    # Fetch raid data
+    # Fetch raid data — skip reports already in the database
     print("\nFetching raid data from WarcraftLogs...")
     try:
-        data = fetch_data.fetch_weekly_data()
-        print(f"✓ Fetched {len(data['raids'])} raids")
+        existing_raid_ids = database.get_existing_raid_ids()
+        print(f"  {len(existing_raid_ids)} reports already stored; skipping their detail fetches")
+        data = fetch_data.fetch_season_data(skip_raid_ids=existing_raid_ids)
+        print(f"✓ Fetched {len(data['raids'])} new raids")
         print(f"✓ Fetched {len(data['encounters'])} encounters")
         print(f"✓ Fetched {len(data['players'])} player records")
+        print(f"✓ Fetched {len(data['externals'])} external defensive casts")
     except Exception as e:
         print(f"✗ Error fetching data: {e}")
         return 1
-    
-    # Store data in database
+
+    # Store data — idempotent: unique indices + INSERT OR IGNORE prevent duplicates
     print("\nStoring data in database...")
     try:
-        import sqlite3
-        conn = sqlite3.connect(config.DATABASE_PATH)
-        cursor = conn.cursor()
-        
-        # Delete existing data for these raid_ids to prevent duplicates
-        raid_ids = [raid['raid_id'] for raid in data['raids']]
-        if raid_ids:
-            placeholders = ','.join('?' * len(raid_ids))
-            print(f"  Cleaning existing data for {len(raid_ids)} raid(s)...")
-            
-            cursor.execute(f'DELETE FROM deaths WHERE raid_id IN ({placeholders})', raid_ids)
-            cursor.execute(f'DELETE FROM player_performance WHERE raid_id IN ({placeholders})', raid_ids)
-            cursor.execute(f'DELETE FROM encounters WHERE raid_id IN ({placeholders})', raid_ids)
-            cursor.execute(f'DELETE FROM raids WHERE raid_id IN ({placeholders})', raid_ids)
-            
-            conn.commit()
-        
-        conn.close()
-        
         # Store raids first
         for raid in data['raids']:
             database.store_raid(raid)
-        
-        # Store encounters and create encounter_id map
-        encounter_map = {}  # (raid_id, boss_name, fight_id) -> encounter_id
+
+        # Store encounters and build encounter_id map
+        encounter_map = {}  # (raid_id, fight_id) -> encounter_id
         for encounter in data['encounters']:
             encounter_id = database.store_encounter(encounter)
-            key = (encounter['raid_id'], encounter['boss_name'], encounter.get('fight_id'))
+            key = (encounter['raid_id'], encounter.get('fight_id'))
             encounter_map[key] = encounter_id
-        
-        # Store player performance with encounter_id
+
+        # Store player performance
         for player in data['players']:
-            key = (player['raid_id'], player['boss_name'], player.get('fight_id'))
+            key = (player['raid_id'], player.get('fight_id'))
             player['encounter_id'] = encounter_map.get(key)
             database.store_player_performance(player)
-        
+
         # Store deaths
         print(f"  Storing {len(data['deaths'])} deaths...")
         for death in data['deaths']:
-            try:
-                database.store_death(death)
-            except Exception as e:
-                print(f"    Error storing death: {e}")
-                print(f"    Death data: {death}")
-                break  # Stop after first error to see it
-        
+            database.store_death(death)
+
+        # Store externals
+        print(f"  Storing {len(data['externals'])} external defensive casts...")
+        for external in data['externals']:
+            database.store_external(external)
+
         print("✓ Data stored successfully")
         print(f"  - {len(data['raids'])} raids")
         print(f"  - {len(data['encounters'])} encounters")
         print(f"  - {len(data['players'])} player records")
         print(f"  - {len(data['deaths'])} death events")
+        print(f"  - {len(data['externals'])} external casts")
     except Exception as e:
         print(f"✗ Error storing data: {e}")
         import traceback

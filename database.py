@@ -1,15 +1,14 @@
 """SQLite database operations for raid statistics."""
 import sqlite3
 from datetime import datetime
-import json
 import config
+
 
 def init_database():
     """Initialize the database with required tables."""
     conn = sqlite3.connect(config.DATABASE_PATH)
     cursor = conn.cursor()
-    
-    # Raids table
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS raids (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,8 +21,7 @@ def init_database():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    
-    # Boss encounters table
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS encounters (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,13 +37,13 @@ def init_database():
             FOREIGN KEY (raid_id) REFERENCES raids(raid_id)
         )
     ''')
-    
-    # Player performance table
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS player_performance (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             raid_id TEXT NOT NULL,
             encounter_id INTEGER,
+            fight_id INTEGER,
             boss_name TEXT,
             difficulty TEXT,
             player_name TEXT NOT NULL,
@@ -56,13 +54,15 @@ def init_database():
             hps REAL,
             percentile REAL,
             deaths INTEGER DEFAULT 0,
+            total_damage REAL,
+            total_healing REAL,
+            total_damage_taken REAL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (raid_id) REFERENCES raids(raid_id),
             FOREIGN KEY (encounter_id) REFERENCES encounters(id)
         )
     ''')
-    
-    # Weekly summaries table
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS weekly_summaries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,14 +76,14 @@ def init_database():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    
-    # Deaths table
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS deaths (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             raid_id TEXT NOT NULL,
             fight_id INTEGER,
             boss_name TEXT,
+            difficulty TEXT,
             player_name TEXT NOT NULL,
             ability_name TEXT,
             ability_id INTEGER,
@@ -93,29 +93,64 @@ def init_database():
         )
     ''')
 
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS externals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            raid_id TEXT NOT NULL,
+            fight_id INTEGER,
+            boss_name TEXT,
+            difficulty TEXT,
+            caster_name TEXT NOT NULL,
+            target_name TEXT NOT NULL,
+            ability_id INTEGER,
+            ability_name TEXT,
+            timestamp INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (raid_id) REFERENCES raids(raid_id)
+        )
+    ''')
 
-
-
-    # Migrations if needed - shouldnt if it's autocreating, but if I persist the db in the future it might need it
+    # Migrations — safe to re-run; errors are caught and ignored
     migrations = [
         "ALTER TABLE encounters ADD COLUMN difficulty TEXT",
+        "ALTER TABLE deaths ADD COLUMN difficulty TEXT",
+        "ALTER TABLE player_performance ADD COLUMN fight_id INTEGER",
+        "ALTER TABLE player_performance ADD COLUMN total_damage REAL",
+        "ALTER TABLE player_performance ADD COLUMN total_healing REAL",
+        "ALTER TABLE player_performance ADD COLUMN total_damage_taken REAL",
+        # Unique indices prevent duplicate rows when re-running the ingestion.
+        # Using CREATE UNIQUE INDEX avoids the need to recreate tables.
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_encounters_unique ON encounters(raid_id, fight_id)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_player_perf_unique ON player_performance(raid_id, fight_id, player_name, role)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_deaths_unique ON deaths(raid_id, fight_id, player_name, ability_id, timestamp)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_externals_unique ON externals(raid_id, fight_id, caster_name, target_name, ability_id, timestamp)",
     ]
     for migration in migrations:
         try:
             cursor.execute(migration)
         except sqlite3.OperationalError:
-            pass  # column already exists
+            pass  # column/index already exists
 
     conn.commit()
     conn.close()
 
-def store_raid(raid_data):
-    """Store raid information in database."""
+
+def get_existing_raid_ids():
+    """Return the set of report codes already stored in the database."""
     conn = sqlite3.connect(config.DATABASE_PATH)
     cursor = conn.cursor()
-    
+    cursor.execute('SELECT raid_id FROM raids')
+    ids = {row[0] for row in cursor.fetchall()}
+    conn.close()
+    return ids
+
+
+def store_raid(raid_data):
+    """Store raid information (upsert by raid_id)."""
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    cursor = conn.cursor()
     cursor.execute('''
-        INSERT OR REPLACE INTO raids 
+        INSERT OR REPLACE INTO raids
         (raid_id, raid_name, start_time, end_time, zone_name, difficulty)
         VALUES (?, ?, ?, ?, ?, ?)
     ''', (
@@ -124,19 +159,18 @@ def store_raid(raid_data):
         raid_data['start_time'],
         raid_data['end_time'],
         raid_data.get('zone_name'),
-        raid_data.get('difficulty')
+        raid_data.get('difficulty'),
     ))
-    
     conn.commit()
     conn.close()
 
+
 def store_encounter(encounter_data):
-    """Store boss encounter data."""
+    """Store boss encounter data. Skips silently if already present."""
     conn = sqlite3.connect(config.DATABASE_PATH)
     cursor = conn.cursor()
-    
     cursor.execute('''
-        INSERT INTO encounters
+        INSERT OR IGNORE INTO encounters
         (raid_id, fight_id, boss_name, difficulty, kill_time, wipe_count, kill_duration_ms, is_kill)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
@@ -147,27 +181,38 @@ def store_encounter(encounter_data):
         encounter_data.get('kill_time'),
         encounter_data.get('wipe_count', 0),
         encounter_data.get('kill_duration_ms'),
-        encounter_data.get('is_kill', False)
+        encounter_data.get('is_kill', False),
     ))
-    
-    encounter_id = cursor.lastrowid
+    # Return the existing row's id if INSERT was ignored
+    if cursor.lastrowid:
+        encounter_id = cursor.lastrowid
+    else:
+        cursor.execute(
+            'SELECT id FROM encounters WHERE raid_id = ? AND fight_id = ?',
+            (encounter_data['raid_id'], encounter_data.get('fight_id'))
+        )
+        row = cursor.fetchone()
+        encounter_id = row[0] if row else None
     conn.commit()
     conn.close()
-    
     return encounter_id
 
+
 def store_player_performance(performance_data):
-    """Store player performance data."""
+    """Store player performance data. Skips silently if already present."""
     conn = sqlite3.connect(config.DATABASE_PATH)
     cursor = conn.cursor()
-    
     cursor.execute('''
-        INSERT INTO player_performance
-        (raid_id, encounter_id, boss_name, difficulty, player_name, player_class, spec, role, dps, hps, percentile, deaths)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT OR IGNORE INTO player_performance
+        (raid_id, encounter_id, fight_id, boss_name, difficulty,
+         player_name, player_class, spec, role,
+         dps, hps, percentile, deaths,
+         total_damage, total_healing, total_damage_taken)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         performance_data['raid_id'],
         performance_data.get('encounter_id'),
+        performance_data.get('fight_id'),
         performance_data.get('boss_name'),
         performance_data.get('difficulty'),
         performance_data['player_name'],
@@ -177,18 +222,70 @@ def store_player_performance(performance_data):
         performance_data.get('dps'),
         performance_data.get('hps'),
         performance_data.get('percentile'),
-        performance_data.get('deaths', 0)
+        performance_data.get('deaths', 0),
+        performance_data.get('total_damage'),
+        performance_data.get('total_healing'),
+        performance_data.get('total_damage_taken'),
     ))
-    
     conn.commit()
     conn.close()
+
+
+def store_death(death_data):
+    """Store death event data. Skips silently if already present."""
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT OR IGNORE INTO deaths
+        (raid_id, fight_id, boss_name, difficulty, player_name, ability_name, ability_id, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        death_data['raid_id'],
+        death_data.get('fight_id'),
+        death_data.get('boss_name'),
+        death_data.get('difficulty'),
+        death_data['player_name'],
+        death_data.get('ability_name'),
+        death_data.get('ability_id'),
+        death_data.get('timestamp'),
+    ))
+    conn.commit()
+    conn.close()
+
+
+def store_external(external_data):
+    """Store an external defensive cast. Skips silently if already present."""
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT OR IGNORE INTO externals
+        (raid_id, fight_id, boss_name, difficulty,
+         caster_name, target_name, ability_id, ability_name, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        external_data['raid_id'],
+        external_data.get('fight_id'),
+        external_data.get('boss_name'),
+        external_data.get('difficulty'),
+        external_data['caster_name'],
+        external_data['target_name'],
+        external_data.get('ability_id'),
+        external_data.get('ability_name'),
+        external_data.get('timestamp'),
+    ))
+    conn.commit()
+    conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Query helpers
+# ---------------------------------------------------------------------------
 
 def get_weekly_summary(week_start, week_end):
     """Get summary statistics for a given week."""
     conn = sqlite3.connect(config.DATABASE_PATH)
     cursor = conn.cursor()
-    
-    # Get raids in date range, using first pull start to last pull end for accurate raid time
+
     cursor.execute('''
         SELECT COUNT(DISTINCT r.raid_id),
                SUM(e.raid_span_ms) as total_time
@@ -205,29 +302,28 @@ def get_weekly_summary(week_start, week_end):
     raid_stats = cursor.fetchone()
     total_raids = raid_stats[0] or 0
     total_time_ms = raid_stats[1] or 0
-    
-    # Get boss kills and wipes
+
     cursor.execute('''
-        SELECT 
+        SELECT
             SUM(CASE WHEN is_kill = 1 THEN 1 ELSE 0 END) as kills,
             SUM(wipe_count) as wipes
         FROM encounters e
         JOIN raids r ON e.raid_id = r.raid_id
         WHERE r.start_time >= ? AND r.start_time <= ?
     ''', (week_start, week_end))
-    
+
     encounter_stats = cursor.fetchone()
     total_kills = encounter_stats[0] or 0
     total_wipes = encounter_stats[1] or 0
-    
+
     conn.close()
-    
     return {
         'total_raids': total_raids,
         'total_bosses_killed': total_kills,
         'total_wipes': total_wipes,
-        'total_raid_time_hours': total_time_ms / (1000 * 60 * 60) if total_time_ms else 0
+        'total_raid_time_hours': total_time_ms / (1000 * 60 * 60) if total_time_ms else 0,
     }
+
 
 def get_top_performers(week_start, week_end, metric='dps', limit=5, difficulty='Heroic'):
     """Get top performers for a given metric, filtered by difficulty."""
@@ -252,26 +348,20 @@ def get_top_performers(week_start, week_end, metric='dps', limit=5, difficulty='
         ORDER BY avg_performance DESC
         LIMIT ?
     ''', (week_start, week_end, difficulty, limit))
-    
+
     results = cursor.fetchall()
     conn.close()
-    
     return [
-        {
-            'name': row[0],
-            'class': row[1],
-            'role': row[2],
-            'avg': row[3],
-            'max': row[4]
-        }
+        {'name': row[0], 'class': row[1], 'role': row[2], 'avg': row[3], 'max': row[4]}
         for row in results
     ]
+
 
 def get_boss_statistics(week_start, week_end):
     """Get statistics per boss for the week."""
     conn = sqlite3.connect(config.DATABASE_PATH)
     cursor = conn.cursor()
-    
+
     cursor.execute('''
         SELECT
             e.boss_name,
@@ -288,20 +378,14 @@ def get_boss_statistics(week_start, week_end):
 
     results = cursor.fetchall()
     conn.close()
-
     return [
-        {
-            'boss': row[0],
-            'difficulty': row[1],
-            'kills': row[2],
-            'wipes': row[3],
-            'avg_kill_time': row[4]
-        }
+        {'boss': row[0], 'difficulty': row[1], 'kills': row[2], 'wipes': row[3], 'avg_kill_time': row[4]}
         for row in results
     ]
 
+
 def get_boss_mvps(week_start, week_end):
-    """Get the highest parser per boss. Uses parse percentile where available, falls back to top DPS."""
+    """Get the highest parser per boss. Uses parse percentile, falls back to top DPS."""
     conn = sqlite3.connect(config.DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -353,50 +437,23 @@ def get_boss_mvps(week_start, week_end):
 
     results = cursor.fetchall()
     conn.close()
-
     return [
         {
-            'boss_name':        row[0],
-            'difficulty':       row[1],
-            'player_name':      row[2],
-            'player_class':     row[3],
-            'role':             row[4],
-            'percentile': row[5],
-            'dps':              row[6],
-            'hps':              row[7],
+            'boss_name': row[0], 'difficulty': row[1], 'player_name': row[2],
+            'player_class': row[3], 'role': row[4], 'percentile': row[5],
+            'dps': row[6], 'hps': row[7],
         }
         for row in results
     ]
 
-def store_death(death_data):
-    """Store death event data."""
-    conn = sqlite3.connect(config.DATABASE_PATH)
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        INSERT INTO deaths 
-        (raid_id, fight_id, boss_name, player_name, ability_name, ability_id, timestamp)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        death_data['raid_id'],
-        death_data.get('fight_id'),
-        death_data.get('boss_name'),
-        death_data['player_name'],
-        death_data.get('ability_name'),
-        death_data.get('ability_id'),
-        death_data.get('timestamp')
-    ))
-    
-    conn.commit()
-    conn.close()
 
 def get_top_death_causes(week_start, week_end, limit=10):
     """Get the top causes of death with boss information."""
     conn = sqlite3.connect(config.DATABASE_PATH)
     cursor = conn.cursor()
-    
+
     cursor.execute('''
-        SELECT 
+        SELECT
             ability_name,
             COUNT(*) as death_count,
             COUNT(DISTINCT player_name) as players_affected,
@@ -411,41 +468,107 @@ def get_top_death_causes(week_start, week_end, limit=10):
         ORDER BY death_count DESC
         LIMIT ?
     ''', (week_start, week_end, limit))
-    
+
     results = cursor.fetchall()
     conn.close()
-    
     return [
-        {
-            'ability': row[0],
-            'deaths': row[1],
-            'players_affected': row[2],
-            'boss': row[3],
-            'ability_id': row[4]
-        }
+        {'ability': row[0], 'deaths': row[1], 'players_affected': row[2], 'boss': row[3], 'ability_id': row[4]}
         for row in results
     ]
+
 
 def get_player_death_count(week_start, week_end):
     """Get death counts per player."""
     conn = sqlite3.connect(config.DATABASE_PATH)
     cursor = conn.cursor()
-    
+
     cursor.execute('''
-        SELECT 
-            player_name,
-            COUNT(*) as death_count
+        SELECT player_name, COUNT(*) as death_count
         FROM deaths d
         JOIN raids r ON d.raid_id = r.raid_id
         WHERE r.start_time >= ? AND r.start_time <= ?
         GROUP BY player_name
         ORDER BY death_count DESC
     ''', (week_start, week_end))
-    
+
     results = cursor.fetchall()
     conn.close()
-    
     return [{'player': row[0], 'deaths': row[1]} for row in results]
 
 
+# ---------------------------------------------------------------------------
+# Season-wide award queries (no time filter — use full DB)
+# ---------------------------------------------------------------------------
 
+def get_season_most_deaths(limit=20):
+    """Players with the most deaths across the whole season (all fights)."""
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT player_name, COUNT(*) as death_count
+        FROM deaths
+        GROUP BY player_name
+        ORDER BY death_count DESC
+        LIMIT ?
+    ''', (limit,))
+    results = cursor.fetchall()
+    conn.close()
+    return [{'player': row[0], 'deaths': row[1]} for row in results]
+
+
+def get_season_most_externals_received(limit=20):
+    """Players who received the most external defensives across the whole season."""
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT target_name, COUNT(*) as externals_received, COUNT(DISTINCT ability_name) as unique_abilities
+        FROM externals
+        GROUP BY target_name
+        ORDER BY externals_received DESC
+        LIMIT ?
+    ''', (limit,))
+    results = cursor.fetchall()
+    conn.close()
+    return [
+        {'player': row[0], 'externals_received': row[1], 'unique_abilities': row[2]}
+        for row in results
+    ]
+
+
+def get_season_most_externals_given(limit=20):
+    """Players who gave the most external defensives across the whole season."""
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT caster_name, COUNT(*) as externals_given, COUNT(DISTINCT ability_name) as unique_abilities
+        FROM externals
+        GROUP BY caster_name
+        ORDER BY externals_given DESC
+        LIMIT ?
+    ''', (limit,))
+    results = cursor.fetchall()
+    conn.close()
+    return [
+        {'player': row[0], 'externals_given': row[1], 'unique_abilities': row[2]}
+        for row in results
+    ]
+
+
+def get_season_most_damage_taken(limit=20):
+    """Players who took the most total boss damage across the whole season (kills only)."""
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT player_name, SUM(total_damage_taken) as total_taken, COUNT(*) as boss_kills
+        FROM player_performance
+        WHERE total_damage_taken IS NOT NULL
+        GROUP BY player_name
+        ORDER BY total_taken DESC
+        LIMIT ?
+    ''', (limit,))
+    results = cursor.fetchall()
+    conn.close()
+    return [
+        {'player': row[0], 'total_damage_taken': row[1], 'boss_kills': row[2]}
+        for row in results
+    ]
